@@ -184,6 +184,21 @@ def make_title(): # 대화의 타이틀 생성
     title = title.strip('"') # 앞뒤의 큰 따옴표 제거
     return jsonify({"title": title})
 
+
+@app.route("/test", methods=['POST'])
+def stream_output(): # 대화의 타이틀 생성
+    params = request.get_json()
+    if not params: # 입력이 없을 경우 에러 메시지 출력 
+        logging.error("error - No valid request")
+        return jsonify({"error": "No valid request"})
+    # 답변 가져오기 
+    user_input = params['content'] 
+    system_prompt = "You are a helpful assistant"
+    result =  chatgpt(system_prompt, user_input)
+    return Response(stream_message(result), content_type='text/plain') # STREAM_TOKEN_SIZE 조절을 통해서, stream 청크 사이즈를 조절할 수 있음. 
+
+
+
 if __name__ == '__main__':
     print("app.run 시작 ")
     app.run(port=5000,debug=True)
