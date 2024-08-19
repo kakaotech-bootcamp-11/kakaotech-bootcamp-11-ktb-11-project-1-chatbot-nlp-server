@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from pdf_retriever import pdf_retriever
 from get_weather import get_weather_info
 from find_routes_v2 import get_route_description
-from openai import AsyncOpenAI
 
 # 플라스크 앱 정의
 app = Flask(__name__)
