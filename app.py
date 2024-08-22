@@ -3,7 +3,7 @@ import json
 import logging
 import warnings
 import os
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
 from pdf_retriever import pdf_retriever
@@ -28,8 +28,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# flask 앱 정의 
-app = Flask(__name__) 
 
 # API 키 로드하기
 print("환경변수 로드 ")
@@ -38,7 +36,6 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") # API 키 설정
 TMAP_API_KEY = os.environ.get("TMAP_API_KEY")
 KAKAO_MAP_API_KEY = os.environ.get("KAKAO_MAP_API_KEY1")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
-
 
 # LLM 변수 정의 
 MAX_TOKENS_OUTPUT = 200
@@ -207,7 +204,9 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
         raise BadRequest("No request body")
     elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
         raise BadRequest("No content field in request body or value for content is empty")
-    return jsonify({"result": f"no 400 error:{params['content']}"})
+        # abort(400, description="No request body ---- ")
+        #raise BadRequest()
+    return jsonify({"result": f"no error:{params['content']}"})
 
 
 if __name__ == '__main__':
