@@ -9,10 +9,13 @@ from dotenv import load_dotenv
 from pdf_retriever import pdf_retriever
 from get_weather import get_weather_info
 from find_routes_v2 import get_route_description
+from error_handler import register_error_handlers
+from werkzeug.exceptions import BadRequest
 
 # 플라스크 앱 정의
 app = Flask(__name__)
 CORS(app)
+register_error_handlers(app) # flask error handler 등록 
 
 # 모든 경고를 무시
 warnings.filterwarnings("ignore")
@@ -45,6 +48,8 @@ print("PDF 검색기 로드 시작")
 pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
 retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
 print("PDF 검색기 로드 끝")
+
+
 
 def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE):
     # 텍스트를 공백을 기준으로 토큰화
@@ -108,8 +113,6 @@ def handle_weather_topic(user_input):
         result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
         return Response(stream_message(result), content_type='text/plain')
 
-
-# 동기식으로 TRANS 주제 처리
 def handle_trans_topic(user_input):
     dict_string = extract_arrv_dest(user_input)
     result = ""
@@ -132,11 +135,17 @@ def handle_else_topic(user_input):
         result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
         return Response(stream_message(result), content_type='text/plain')
 
+def validate_request_data():
+    params = request.get_json()
+    if not params:  # JSON 데이터가 없는 경우
+        raise BadRequest("No request body")
+    elif 'content' not in params or not params['content'].strip():  # 'content' 필드가 없거나 값이 비어 있는 경우
+        raise BadRequest("No content field in request body or value for content is empty")
+    return params
+
 @app.route("/conv", methods=['POST'])
 def llm():
-    params = request.get_json()
-    if not params:
-        return jsonify({"error": "No input data provided"}), 400
+    params = validate_request_data()  # 공통 함수 호출
     user_input = params['content']
 
     # 동기식으로 RAG 기법 적용한 QA 체인 생성
@@ -169,11 +178,7 @@ def llm():
 
 @app.route("/title", methods=['POST'])
 def make_title(): # 대화의 타이틀 생성
-    params = request.get_json()
-    if not params: # 입력이 없을 경우 에러 메시지 출력 
-        logging.error("error - No valid request")
-        return jsonify({"error": "No valid request"})
-    # 답변 가져오기 
+    params = validate_request_data()
     user_input = params['content'] 
     system_prompt = """넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘."""
     title = chatgpt(system_prompt, user_input)
@@ -186,16 +191,23 @@ def make_title(): # 대화의 타이틀 생성
 
 @app.route("/test", methods=['POST'])
 def stream_output(): # 대화의 타이틀 생성
-    params = request.get_json()
-    if not params: # 입력이 없을 경우 에러 메시지 출력 
-        logging.error("error - No valid request")
-        return jsonify({"error": "No valid request"})
+    params = validate_request_data()
     # 답변 가져오기 
     user_input = params['content'] 
     system_prompt = "You are a helpful assistant"
     result =  chatgpt(system_prompt, user_input)
     return Response(stream_message(result), content_type='text/plain') # STREAM_TOKEN_SIZE 조절을 통해서, stream 청크 사이즈를 조절할 수 있음. 
 
+
+# test function for error handling
+@app.route("/error_handling", methods=['POST'])
+def error_handle(): # 대화의 타이틀 생성 #(params)
+    params = request.get_json()
+    if not params : # json = {}
+        raise BadRequest("No request body")
+    elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
+        raise BadRequest("No content field in request body or value for content is empty")
+    return jsonify({"result": f"no 400 error:{params['content']}"})
 
 
 if __name__ == '__main__':
