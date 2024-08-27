@@ -9,23 +9,28 @@
 ## 참고 블로그 
 - [링크](https://github.com/leejin-kyu/RAG_simple/blob/main/gradio%EB%A1%9C_PDF_%EC%B1%97%EB%B4%87_%EC%9B%B9%EC%84%9C%EB%B9%84%EC%8A%A4_%EA%B5%AC%ED%98%84%ED%95%98%EA%B8%B0_%EC%88%98%EC%A0%95.ipynb) 
 
-## 사전 준비  
+## 사전 준비 
+ 
 0. 가상환경을 원한다면, 가상 환경 만들고 activate
 ~~~python 
     python -m venv {가상환경이름}
     source {가상환경이름}/bin/activate
 ~~~
 
-1. 필요한 라이브러리들 설치   
+1. python 및 필요한 라이브러리들 설치   
+- python version 은  3.12.4 로 설치하기
+- 라이브러리 설치 
 `pip install requirements.txt`
 
 2. postman에 가입한다. [링크](https://www.postman.com/)  
 
-3. RAG에서 검색하고 싶은 PDF 파일 구비 
-- pdf 파일을 다운 받고, data 디렉토리를 만들어서 그 안에 저장한다. 
+3. RAG에서 검색하고 싶은 PDF 파일 구비
+(11조 -> 보안 문제로 지은에게 문의 주시면 pdf 파일을 드리겠습니다. )
+- pdf 파일을 data 디렉토리 내에 넣음. 
 
 
 4. API key 발급 받기
+(11조 -> 다 발급 받지 마시고 지은에게 문의 주시면 환경 변수 파일을 드리겠습니다. )
 총 4개의 API 키가 필요하다(openweathermap, open ai, tmap, kakao map)  
 각 사이트에 들어가서 API를 발급 받고, .env 파일을 만들어서 다음과 같이 지정해준다. 
 
@@ -37,9 +42,42 @@
     LOCATION1 = Seongnam-si
 ~~~
   + 날씨를 알고 싶은 지역을 LOCATION1에 저장해준다. 
-
     .gitignore 파일에 .env 파일명 추가하기
     : git에 업로드할 에정이라면, .gitignore 파일에 .env를 추가하여 api 키가 외부에 노출되지 않게 해야함.   
+
+5. (SKIP) 맥북이라면 airplay OFF를 꺼주세요. 
+- airplay가 포트 5000번을 차지하기 때문에, flask 앱이 실행이 되지 않음. 
+- System Preferences -> General -> AirDrop & Handoff -> OFF
+
+
+## 서비스 실행
+1. 먼저 app.py 의 pdf_path를 나의 pdf 이름으로 바꿔줌 
+~~~
+# LLM 변수 정의 
+...
+print("PDF 검색기 로드 시작")
+pdf_path = './data/파일이름'  # PDF 경로를 지정
+~~~
+
+2. app 실행   
+터미널에 다음 명령어를 실행 : `python app.py`  
+그러면 터미널에 localhost:5001에 서빙이 잘 되었다는 메시지가 뜬다. 
+
+3. (test)postman에 로그인해서 테스트를 위한 HTTP request를 생성해준다. 
+![postman UI](./imgs/postman.png)
+
+(1) API 요청 유형을 선택한다. - POST 유형 선택한다.   
+(2) API 엔드포인트 주소 선택 - http://127.0.01:5001/conv으로 설정한다.   
+(3) Request 데이터 정의 - 아래와 같이 json 형식으로 전달할 데이터를 정의함   
+~~~python
+{
+    "content": "판교 날씨"
+}
+~~~
+- content 필드에 사용자 예상 질문을 넣는다. 
+
+(4) 전송 버튼 클릭 
+- 클릭하면 하단 결과 창에서 LLM 모델이 생성한 답변을 확인할 수 있다. 
 
 
 
@@ -58,36 +96,6 @@
 - `find_routes.py`: 목적지와 출발지 간 최적 경로를 실시간으로 받아오는 역할(kakaomap, tmap api 사용)
 
 
-## 함수 실행하기 
-1. 먼저 app.py 의 pdf_path를 나의 pdf 이름으로 바꿔줌 
-~~~
-# LLM 변수 정의 
-...
-print("PDF 검색기 로드 시작")
-pdf_path = './data/파일이름'  # PDF 경로를 지정
-~~~
-
-2. app 실행   
-터미널에 다음 명령어를 실행 : `python app.py`  
-그러면 터미널에 localhost:5000에 서빙이 잘 되었다는 메시지가 뜬다. 
-
-3. postman에 로그인해서 테스트를 위한 HTTP request를 생성해준다. 
-
-![postman UI](./imgs/postman.png)
-
-
-(1) API 요청 유형을 선택한다. - POST 유형 선택한다.   
-(2) API 엔드포인트 주소 선택 - http://127.0.01:5000/conv으로 설정한다.   
-(3) Request 데이터 정의 - 아래와 같이 json 형식으로 전달할 데이터를 정의함   
-~~~python
-{
-    "content": "판교 날씨"
-}
-~~~
-- content 필드에 사용자 예상 질문을 넣는다. 
-
-(4) 전송 버튼 클릭 
-- 클릭하면 하단 결과 창에서 LLM 모델이 생성한 답변을 확인할 수 있다. 
 
 ### 기타 
 #### 날씨 API : [OpenWeatherMap API](https://openweathermap.org/api/one-call-3)
