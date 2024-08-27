@@ -56,6 +56,7 @@ def vectorDB(splitted_docs, api_key): # open AI embedding 기반으로 vectorDB 
     vectordb.add_documents(splitted_docs)
     return vectordb
 
+
 def create_qa_chain(retriever, model_name, api_key):
     """Create a QA chain using the retriever."""
     qa_chain = RetrievalQA.from_chain_type(
@@ -70,20 +71,20 @@ def create_qa_chain(retriever, model_name, api_key):
     )
     return qa_chain
 
-def query_qa_chain(qa_chain, input_text, model):
+"""def query_qa_chain(qa_chain, input_text, model):
     response = qa_chain(input_text)
     if not response['result']:
         # PDF에서 정보를 찾지 못한 경우 ChatGPT에게 직접 질문
         chat_model = model
         response = chat_model({"text": input_text})
         return response['choices'][0]['message']['content']
-    return response['result']
+    return response['result']"""
 
-def pdf_retriever(pdf_path, model_version): #, open_api_key): # test
+def pdf_retriever(pdf_path, model_version, OPENAI_API_KEY): #, open_api_key): # test
     #load_dotenv() # # .env 파일에서 환경 변수를 로드합니다
     #open_api_key = os.environ.get("OPENAI_API_KEY") # API 키 설정
-    open_api_key = "sk-" # API 키 설정
-
+    #open_api_key = "sk-" # API 키 설정
+    open_api_key = OPENAI_API_KEY # API 키 설정
     # RAG를 위한 vectorDB와 qa chain 을 로드함. 
     documents = load_pdf(pdf_path)
     splitted_docs = split_docs(documents, SpacyTextSplitter)

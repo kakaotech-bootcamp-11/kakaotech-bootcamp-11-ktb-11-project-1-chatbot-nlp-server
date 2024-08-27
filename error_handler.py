@@ -14,43 +14,46 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-#app = Flask(__name__)
 
 # open ai API 를 정의함 
 def register_error_handlers(app):
     @app.errorhandler(404)
-    def not_found_error(error):
+    def not_found_error(e):
         return jsonify({
             'error': "Resource not found",
             'code': 404,
-            'description': getattr(error, 'description', 'Not Found') 
-        }), 404
+            'description': getattr(e, 'description', 'Not Found'),
+            'error_message': str(e)
+        })
     
     @app.errorhandler(TypeError)
-    def handle_type_error(error):
+    def handle_type_error(e):
         return jsonify({
             'error': "TypeError",
             'code': 400,
-            'description': getattr(error, 'description', 'Not Found') 
-        }), 400
+            'description': getattr(e, 'description', 'Type Error'),
+            'error_message': str(e)
+        })
 
     @app.errorhandler(400)
-    def bad_request_error(error):
+    def bad_request_error(e):
         return jsonify({
             'error': "Bad request",
             'code': 400,
-            'description': getattr(error, 'description', 'Bad Request')
-        }), 400
+            'description': getattr(e, 'description', 'Bad Request'),
+            'error_message': str(e)
+        })
 
     @app.errorhandler(500)
-    def internal_error(error):
+    def internal_error(e):
         print("internal_error, error code : 500")
-        print('error:', error) # error: "500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application."
+        print('error:', e) # error: "500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application."
         return jsonify({
             'error': "Internal server error",
             'code': 500,
-            'description': getattr(error, 'description', 'Internal Server Error')
-        }), 500
+            'description': getattr(e, 'description', 'Internal Server Error'),
+            'error_message': str(e)
+        })
     @app.errorhandler(OpenAIError)
     def handle_openai_error(e):
         if isinstance(e, openai.BadRequestError):
