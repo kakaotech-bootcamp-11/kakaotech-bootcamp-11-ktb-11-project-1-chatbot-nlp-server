@@ -195,8 +195,8 @@ def llm():
     if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다."])  : # 만약 
         logging.info( f"RAG - user input: {user_input}")
         print("logging: RAG 답변 ")
-        return Response(stream_message(response['result']), content_type='text/plain')
-    
+        #return Response(stream_message(response['result']), content_type='text-event') # here
+        return Response(stream_message(response['result']), mimetype='text/event-stream')
     elif not response['result']: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
         logging.error("error" "RAG를 요청 했으나 결과가 없음. 400")
         raise BadRequest("No response from RAG") # 추후 수정
@@ -256,5 +256,4 @@ if __name__ == '__main__':
     except OpenAIError as e:
         raise e
     print("PDF 검색기 로드 끝")
-    
     app.run(port=5001,debug=True)
