@@ -46,6 +46,17 @@ MODEL_VERSION = "gpt-4o" # "gpt-3.5-turbo"
 MAX_TOKENS_OUTPUT = 500
 
 
+# pdf 로드 
+
+pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
+retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+try:
+    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+except OpenAIError as e:
+    raise e
+print("PDF 검색기 로드 끝")
+
+
 def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
     # 텍스트를 공백을 기준으로 토큰화
     words = text.split()
@@ -249,11 +260,5 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
 if __name__ == '__main__':
     print("app.run 시작")
     print("PDF 검색기 로드 시작")
-    pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
-    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
-    try:
-        retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
-    except OpenAIError as e:
-        raise e
-    print("PDF 검색기 로드 끝")
+    
     app.run(port=5001,debug=True)
