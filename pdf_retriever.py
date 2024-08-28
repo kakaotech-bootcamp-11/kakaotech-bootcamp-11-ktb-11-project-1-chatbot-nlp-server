@@ -41,7 +41,7 @@ def split_docs(documents):
 
     # parameter  정의 : pdf 경로 및 chu
     text_splitter = RecursiveCharacterTextSplitter(
-        separators=["Title :", "\n", "\n\n", ".", " "],  # Title, 문단, 문장, 단어 순으로 분할
+        separators=["Title", "\n", "\n\n", ".", " "],  # Title, 문단, 문장, 단어 순으로 분할
         chunk_size=500,  # 각 청크의 최대 크기
         chunk_overlap=50  # 청크 간 중복되는 문자 수
     ) # test 용 
@@ -70,7 +70,7 @@ def vectorDB(api_key): # vectorDB 생성
 
 def create_qa_chain(retriever, model_name, api_key):
     """Create a QA chain using the retriever."""
-    qa_chain = RetrievalQA.from_chain_type(
+    rag_chain = RetrievalQA.from_chain_type(
         llm=ChatOpenAI(model_name=model_name, temperature=0,
                        openai_api_key=api_key),
         chain_type="stuff", #stuff,  map_reduce, refine, map_rerank
@@ -80,20 +80,22 @@ def create_qa_chain(retriever, model_name, api_key):
         "document_separator": "<<<<>>>>>"
         }
     )
-    return qa_chain
+    return rag_chain
 
 
 def pdf_retriever(pdf_path, model_version, OPENAI_API_KEY): #, open_api_key): # test
     open_api_key = OPENAI_API_KEY # API 키 설정
     
+    
+
     # RAG를 위한 vectorDB와 qa chain 을 로드함. 
     documents = load_pdf(pdf_path)
     splitted_docs = split_docs(documents)
     db = vectorDB(open_api_key)
     db.add_documents(splitted_docs)
     retriever = db.as_retriever(search_kwargs={"k": 1}) # 유사도가 높은 결과 1개 반환 
-    qa_chain = create_qa_chain(retriever, model_version, open_api_key)
-    return qa_chain
+    rag_chain = create_qa_chain(retriever, model_version, open_api_key)
+    return rag_chain
 
 """
 ## ==== test ===========
