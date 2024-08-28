@@ -2,13 +2,13 @@ import unittest
 import json
 import os
 from datetime import datetime
-from trash.app import app
+from app import app
 
 class AppIntegrationTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         self.app.testing = True
-        # JSON 파일 경로 설정
+        # JSON 파일 경로 설정 
         self.user_input_file = 'test/input/user_inputs.json'
         # 출력 파일을 저장할 디렉토리 설정
         self.output_dir = 'test/output'
