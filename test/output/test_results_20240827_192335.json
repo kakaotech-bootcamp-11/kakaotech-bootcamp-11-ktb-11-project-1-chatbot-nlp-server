@@ -1,0 +1,252 @@
+[
+  {
+    "input": "카카오 클라우드 교육 채널에 로그인이 되지 않을 경우 어떻게 해야 하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "카카오 클라우드 교육의 전체 일정과 시간표는 어떻게 구성되어 있나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "오프라인 교육 참여 신청 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "인프런 크레딧을 받기 위해 필요한 절차는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "인프런 강의 지원은 언제까지 유효한가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "ChatGPT Plus 구독료 지원을 신청하는 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "Colab Pro+ 지원금을 청구하는 과정은 어떻게 되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "팀 미션 주제는 어떻게 선택하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "개인 미션과 팀 미션의 차이는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석율이 훈련 장려금에 어떻게 영향을 미치나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "K-디지털 트레이닝 특별훈련수당의 지급 기준은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석 정정을 신청하는 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "조기취업 시 중도포기 절차는 어떻게 되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "부정출결(대리출석) 시 발생하는 페널티는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "중도포기 시 다른 K-Digital Training 교육 참여에 제한이 있나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "사원증 배부는 언제, 어디에서 이루어지나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석 인정 사유는 어떤 것이 있으며, 어떻게 신청하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "국민내일배움카드로 훈련 장려금을 받기 위한 조건은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "AWS 사용료 지원은 어떤 방식으로 이루어지나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "팀빌딩은 어떻게 진행되며, 팀원 모집 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "교육 중 휴가를 신청하는 절차는 어떻게 되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "휴강일과 공휴일에는 어떤 교육이 진행되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "팀 미션 발표회는 언제, 어떻게 진행되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석율이 80% 미만일 경우 어떤 불이익이 있나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "사설 대회 참여로 인한 출석 인정이 가능한가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "교육 중 외출 또는 조퇴 시 출석 처리 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "인공지능 과정에서 프로젝트 비율이 높아진 이유는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "국민내일배움카드로 중도탈락 시 발생하는 페널티는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "구름 EXP 미션은 어떻게 선택하고 수행하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "구글 Colab Pro+ 구독 취소 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "인공지능 커리큘럼 변경 내용은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "중도포기서 작성 시 주의사항은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "자격증 응시료 지원을 받기 위한 조건은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "부정출결이 적발되면 어떤 처벌이 따르나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석율 확인 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "인프런 강의 구매 시 할인율은 어떻게 적용되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "팀 미션 진행 시 퍼실리테이터의 역할은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석 인정 신청서 작성 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "병가 시 필요한 증빙서류는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "예비군 훈련 시 출석 인정 절차는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "면접 참여로 인한 출석 인정 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "졸업식 등 기타 사유로 출석을 인정받을 수 있나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "중도포기서 제출 방법은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석을 인정받기 위해 증빙서류를 어디에 제출해야 하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "훈련 장려금 지급 절차는 어떻게 진행되나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "출석 정정이 필요한 경우, 어떻게 신청하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "카카오 클라우드 관련 강의의 주요 주제는 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "팀 미션 발표 준비 시 유의사항은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "구름 EXP 대시보드를 통해 제공되는 기능은 무엇인가요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  },
+  {
+    "input": "ZEP 플랫폼에서 퍼실리테이터와 어떻게 소통하나요?",
+    "status_code": 200,
+    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
+  }
+]
