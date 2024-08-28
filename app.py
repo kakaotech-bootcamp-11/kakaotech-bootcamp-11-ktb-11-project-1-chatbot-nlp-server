@@ -3,7 +3,7 @@ import json
 import logging
 import warnings
 import os
-from flask import Flask, request, jsonify, Response, abort
+from flask import Flask, request, jsonify, Response, abort, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
 from pdf_retriever import pdf_retriever
@@ -55,15 +55,27 @@ except OpenAIError as e:
 print("PDF 검색기 로드 끝")
 
 
-def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
+"""def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
     # 텍스트를 공백을 기준으로 토큰화
     words = text.split()
     for i in range(0, len(words), max_tokens):
         yield ' '.join(words[i:i+max_tokens])
 
 def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
+    
     for chunk in split_text_into_tokens(text, max_tokens):
-        yield chunk  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.
+        yield f"data: {chunk}\n\n"  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.
+
+"""
+
+def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
+    words = text.split()
+    for i in range(0, len(words), max_tokens):
+        chunk = ' '.join(words[i:i+max_tokens])
+        yield f"data: {chunk}\n\n"
+    """for chunk in split_text_into_tokens(text, max_tokens):
+        yield f"data: {chunk}\n\n"  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다."""
+
 
 
 def stream_chatgpt(system_prompt, user_prompt):
@@ -86,12 +98,10 @@ def stream_chatgpt(system_prompt, user_prompt):
                 text = chunk.choices[0].delta.content
                 #print("chunk.choices[0]", chunk.choices[0])
                 #print("text:", text, "\n")
-                if text is None: # None type 일 경우 pass 
-                    continue
-                result_txt += str(text)
-
-                yield text
-            print(result_txt)
+                if text:
+                    result_txt += text
+                    yield f"data: {text}\n\n"
+            print("답변 결과:\n", result_txt)
             
         return Response(event_stream(), mimetype='text/event-stream')
     except OpenAIError as e:
@@ -231,14 +241,17 @@ def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식
     user_input = params['content'] 
     system_prompt = """사용자의 질문에 친절하게 대답해줘."""
     result = text_chatgpt(system_prompt, user_input)
-    print("result:", result)
-    return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'
+    print("result(whole text):", result)
+    return Response(stream_with_context(stream_message(result)), mimetype='text/event-stream') # 'text/plain'
+    #return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'
 
+#@app.route("/test/stream", methods=['POST'])
 @app.route("/test/stream", methods=['POST'])
 def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴. 
     params = validate_request_data()
     # 답변 가져오기 
-    user_input = params['content'] 
+    user_input = params['content']
+    user_input = "뮤지컬에 대해서 알려줘"
     system_prompt = "You are a helpful assistant"
     result = stream_chatgpt(system_prompt, user_input) # 
     return result 
@@ -254,6 +267,17 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
         #abort(500, description="No request body ---- ")
     return jsonify({"result": f"no error:{params['content']}"})
 
+
+
+# TEST 
+def iter_file_lines(filename):
+    with open(filename, 'r') as f:
+        for line in f:
+            yield line
+
+@app.route('/textfile')
+def stream_text_file():
+    return Response(iter_file_lines('test.txt'), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     print("app.run 시작")
