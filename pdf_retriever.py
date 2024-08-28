@@ -31,30 +31,40 @@ def load_pdf(file_path): # 파일을 읽어 문서 데이터를 가져옵니다.
         pipeline="ko_core_news_sm"
     )"""
 
-def split_docs(documents, Splitter):
+def split_docs(documents):
     # 문서를 처리하기 좋은 크기의 조각으로 나누는 스플리터를 설정합니다.
     # 'ko_core_news_sm'은 한국어 처리를 위한 Spacy 모델입니다.
-    text_splitter = Splitter(
+    """text_splitter = Splitter(
         chunk_size=200, # 문서를 나누는 단위 
         pipeline="ko_core_news_sm"
-    )
+    )"""
 
+    # parameter  정의 : pdf 경로 및 chu
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators=["Title :", "\n", "\n\n", ".", " "],  # Title, 문단, 문장, 단어 순으로 분할
+        chunk_size=500,  # 각 청크의 최대 크기
+        chunk_overlap=50  # 청크 간 중복되는 문자 수
+    ) # test 용 
     splitted_documents = text_splitter.split_documents(documents)  # 문서를 나눕니다.
     print(f"Split into {len(splitted_documents)} document chunks.")
     return splitted_documents
 
-def vectorDB(splitted_docs, api_key): # open AI embedding 기반으로 vectorDB 생성
+def vectorDB(api_key): # vectorDB 생성
     # OpenAI의 임베딩 모델을 초기화합니다. 여기서는 'text-embedding-ada-002' 모델을 사용합니다.
-    embeddings = OpenAIEmbeddings(
+    embedding_function = OpenAIEmbeddings(
         model= "text-embedding-3-small", #"text-embedding-3-large", "text-embedding-ada-002",
         openai_api_key=api_key
     )
-    vectordb = Chroma(
-        persist_directory="./data",  # 데이터 저장 경로 지정
-        embedding_function=embeddings  # 임베딩 함수 지정
-    )
-    vectordb.add_documents(splitted_docs)
-    return vectordb
+    db = None
+    if os.path.exists("./data/chroma.db"): # 이전에 존재한 경우 
+        db = Chroma(persist_directory="./data/chroma.db", embedding_function=embedding_function)
+    else:
+        db = Chroma(
+            persist_directory="./data/chroma.db",  # 데이터 저장 경로 지정
+            embedding_function=embeddings  # 임베딩 함수 지정
+        )
+
+    return db #vectordb
 
 
 def create_qa_chain(retriever, model_name, api_key):
@@ -62,7 +72,7 @@ def create_qa_chain(retriever, model_name, api_key):
     qa_chain = RetrievalQA.from_chain_type(
         llm=ChatOpenAI(model_name=model_name, temperature=0,
                        openai_api_key=api_key),
-        chain_type="stuff", #stuff,  map_reduce, refine
+        chain_type="stuff", #stuff,  map_reduce, refine, map_rerank
         retriever=retriever,
         return_source_documents=False,
         chain_type_kwargs = {
@@ -81,15 +91,14 @@ def create_qa_chain(retriever, model_name, api_key):
     return response['result']"""
 
 def pdf_retriever(pdf_path, model_version, OPENAI_API_KEY): #, open_api_key): # test
-    #load_dotenv() # # .env 파일에서 환경 변수를 로드합니다
-    #open_api_key = os.environ.get("OPENAI_API_KEY") # API 키 설정
-    #open_api_key = "sk-" # API 키 설정
     open_api_key = OPENAI_API_KEY # API 키 설정
+    
     # RAG를 위한 vectorDB와 qa chain 을 로드함. 
     documents = load_pdf(pdf_path)
-    splitted_docs = split_docs(documents, SpacyTextSplitter)
-    vectordb = vectorDB(splitted_docs, open_api_key)
-    retriever = vectordb.as_retriever(search_kwargs={"k": 1}) # 유사도가 높은 결과 1개 반환 
+    splitted_docs = split_docs(documents)
+    db = vectorDB(open_api_key)
+    db.add_documents(splitted_docs)
+    retriever = db.as_retriever(search_kwargs={"k": 1}) # 유사도가 높은 결과 1개 반환 
     qa_chain = create_qa_chain(retriever, model_version, open_api_key)
     return qa_chain
 
