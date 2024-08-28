@@ -56,15 +56,16 @@ def vectorDB(api_key): # vectorDB 생성
         openai_api_key=api_key
     )
     db = None
-    if os.path.exists("./data/chroma.db"): # 이전에 존재한 경우 
-        db = Chroma(persist_directory="./data/chroma.db", embedding_function=embedding_function)
+    if os.path.exists("data/chroma.db"): # 이전에 존재한 경우 
+        print("이미 벡터 db 존재")
+        db = Chroma(persist_directory="data/chroma.db", embedding_function=embedding_function)
     else:
+        print("새롭게 만들기")
         db = Chroma(
-            persist_directory="./data/chroma.db",  # 데이터 저장 경로 지정
-            embedding_function=embeddings  # 임베딩 함수 지정
+            persist_directory="data/chroma.db",  # 데이터 저장 경로 지정
+            embedding_function=embedding_function  # 임베딩 함수 지정
         )
-
-    return db #vectordb
+    return db 
 
 
 def create_qa_chain(retriever, model_name, api_key):
@@ -81,14 +82,6 @@ def create_qa_chain(retriever, model_name, api_key):
     )
     return qa_chain
 
-"""def query_qa_chain(qa_chain, input_text, model):
-    response = qa_chain(input_text)
-    if not response['result']:
-        # PDF에서 정보를 찾지 못한 경우 ChatGPT에게 직접 질문
-        chat_model = model
-        response = chat_model({"text": input_text})
-        return response['choices'][0]['message']['content']
-    return response['result']"""
 
 def pdf_retriever(pdf_path, model_version, OPENAI_API_KEY): #, open_api_key): # test
     open_api_key = OPENAI_API_KEY # API 키 설정
