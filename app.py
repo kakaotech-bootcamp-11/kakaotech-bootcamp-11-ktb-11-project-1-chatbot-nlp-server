@@ -42,13 +42,13 @@ WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 # LLM 변수 정의 
 STREAM_TOKEN_SIZE = 30
-MODEL_VERSION = "gpt-4o" # "gpt-3.5-turbo"  
+MODEL_VERSION = "gpt-4o-mini" # "gpt-3.5-turbo"  
 MAX_TOKENS_OUTPUT = 500
 
 
 # pdf 로드 
 
-pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
+pdf_path = './data/ktb_data_08.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
 retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
 try:
     retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
