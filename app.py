@@ -6,13 +6,11 @@ import os
 from flask import Flask, request, jsonify, Response, abort, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
-from pdf_retriever import pdf_retriever
+from document_retriever import my_retriever
 from get_weather import get_weather_info
 from find_routes_v2 import get_route_description
 from error_handler import register_error_handlers
 from openai import OpenAIError
-
-
 from werkzeug.exceptions import BadRequest
 
 # 플라스크 앱 정의
@@ -44,38 +42,20 @@ MODEL_VERSION = "gpt-4o-mini" # "gpt-3.5-turbo"
 MAX_TOKENS_OUTPUT = 500
 
 
-# pdf 로드 
-
-pdf_path = './data/ktb_data_08.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
-#retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+# 검색할 문서 로드 
+file_path = 'data/ktb_data_09.md'# PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
 try:
-    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+    retriever = my_retriever(file_path)
 except OpenAIError as e:
     raise e
-print("PDF 검색기 로드 끝")
+print("검색기 로드 끝")
 
-
-"""def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
-    # 텍스트를 공백을 기준으로 토큰화
-    words = text.split()
-    for i in range(0, len(words), max_tokens):
-        yield ' '.join(words[i:i+max_tokens])
-
-def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
-    
-    for chunk in split_text_into_tokens(text, max_tokens):
-        yield f"data: {chunk}\n\n"  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.
-
-"""
 
 def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
     words = text.split()
     for i in range(0, len(words), max_tokens):
         chunk = ' '.join(words[i:i+max_tokens])
         yield f"data: {chunk}\n\n"
-    """for chunk in split_text_into_tokens(text, max_tokens):
-        yield f"data: {chunk}\n\n"  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다."""
-
 
 
 def stream_chatgpt(system_prompt, user_prompt):
@@ -208,15 +188,18 @@ def llm():
     params = validate_request_data()  # 공통 함수 호출
     user_input = params['content']
 
+    print("user_input:", user_input)
+
     # 동기식으로 RAG 기법 적용한 QA 체인 생성
-    response = retriever(user_input)
+    response = retriever.invoke(user_input)
+    print("response type:", type(response))
     print('RAG response:', response)
-    if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다."])  : # 만약 
+    #if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다"])  : # 만약 
+    if response and response != "해당 정보는 제공된 문서들에 포함되어 있지 않습니다.":
         logging.info( f"RAG - user input: {user_input}")
-        print("logging: RAG 답변 ")
-        #return Response(stream_message(response['result']), content_type='text-event') # here
-        return Response(stream_message(response['result']), mimetype='text/event-stream')
-    elif not response['result']: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
+        print("logging: RAG 답변")
+        return Response(stream_message(response), mimetype='text/event-stream')
+    elif not response: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
         logging.error("error" "RAG를 요청 했으나 결과가 없음. 400")
         raise BadRequest("No response from RAG") # 추후 수정
 
@@ -264,23 +247,23 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
         raise BadRequest("No request body")
     elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
         raise BadRequest("No content field in request body or value for content is empty")
-        #abort(500, description="No request body ---- ")
     return jsonify({"result": f"no error:{params['content']}"})
 
+@app.route("/title", methods=['POST'])
+def make_title(): # 대화의 타이틀 생성
+    params = validate_request_data()
+    user_input = params['content'] 
+    system_prompt = """넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘."""
+    title = text_chatgpt(system_prompt, user_input)
 
+    if title is None:
+        return jsonify({"error": "죄송해요. 챗 지피티가 제목을 제대로 가져오지 못했어요."})
+    title = title.strip('"') # 앞뒤의 큰 따옴표 제거
+    return jsonify({"title": title})
 
-# TEST 
-def iter_file_lines(filename):
-    with open(filename, 'r') as f:
-        for line in f:
-            yield line
-
-@app.route('/textfile')
-def stream_text_file():
-    return Response(iter_file_lines('test.txt'), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    print("app.run 시작")
-    print("PDF 검색기 로드 시작")
-    
+    print("app starts running")
     app.run(port=5001,debug=True)
+    
+    
