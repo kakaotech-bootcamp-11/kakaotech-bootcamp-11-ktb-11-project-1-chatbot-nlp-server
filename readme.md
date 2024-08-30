@@ -51,12 +51,18 @@
 
 
 ## 서비스 실행
-1. 먼저 app.py 의 pdf_path를 나의 pdf 이름으로 바꿔줌 
-~~~
-# LLM 변수 정의 
-...
-print("PDF 검색기 로드 시작")
-pdf_path = './data/파일이름'  # PDF 경로를 지정
+0. RAG 옵션이 바뀌었거나, 문서가 업데이트 되었을 때 
+/data/retrievers/faiss_index 내의 파일들을 삭제해줍니다. 
+
+1. app.py 의 file_path 나의 pdf 이름으로 바꿔줌 
+~~~python
+# 검색할 문서 로드 
+file_path = 'data/ktb_data_09.md'# PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
+try:
+    retriever = my_retriever(file_path)
+except OpenAIError as e:
+    raise e
+print("검색기 로드 끝")
 ~~~
 
 2. app 실행   
@@ -89,11 +95,12 @@ pdf_path = './data/파일이름'  # PDF 경로를 지정
     (3) 교통 관련 질문(e.g. 서울역에서 판교까지 어떻게 가?)  
     (4) 기타 질문(e.g. 오늘 뭐할지 추천해줘.)
 
-- `pdf_retreiver.py`: 검색 증강(RAG)를 위한 함수
+- `document_retriever.py`: 검색 증강(RAG)를 위한 함수
   - pdf읽기, vectorDB 만들기, PDF 검색기 등 정의 
 
 - `get_weather.py`: 날씨 정보를 얻어오는 api(open weather api를 사용)
-- `find_routes.py`: 목적지와 출발지 간 최적 경로를 실시간으로 받아오는 역할(kakaomap, tmap api 사용)
+- `find_routes_v2.py`: 목적지와 출발지 간 최적 경로를 실시간으로 받아오는 역할(kakaomap, tmap api 사용)
+- `error_handler.py`: flask error handler를 정의
 
 
 
