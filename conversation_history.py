@@ -57,4 +57,3 @@ for conversation in recent_conversations:
     print(f"발화 주체: {conversation['role']}")
     print(f"대화 텍스트: {conversation['text']}")
     print(f"태그: {conversation['tags']}\n")
-
