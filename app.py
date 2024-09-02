@@ -3,25 +3,22 @@ import json
 import logging
 import warnings
 import os
-from flask import Flask, request, jsonify, Response, abort
+from flask import Flask, request, jsonify, Response, abort, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
-from pdf_retriever import pdf_retriever
+from document_retriever import my_retriever
 from get_weather import get_weather_info
 from find_routes_v2 import get_route_description
 from error_handler import register_error_handlers
 from openai import OpenAIError
-
-
 from werkzeug.exceptions import BadRequest
+from conversation_history import save_conversation, history
 
 # 플라스크 앱 정의
 app = Flask(__name__)
 CORS(app)
 register_error_handlers(app) # flask error handler 등록 
 
-# 모든 경고를 무시
-warnings.filterwarnings("ignore")
 
 # 로깅 설정
 logging.basicConfig(
@@ -46,26 +43,20 @@ MODEL_VERSION = "gpt-4o-mini" # "gpt-3.5-turbo"
 MAX_TOKENS_OUTPUT = 500
 
 
-# pdf 로드 
-
-pdf_path = './data/ktb_data_08.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
-retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+# 검색할 문서 로드 
+file_path = 'data/ktb_data_09.md'# PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
 try:
-    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+    retriever = my_retriever(file_path)
 except OpenAIError as e:
     raise e
-print("PDF 검색기 로드 끝")
+print("검색기 로드 끝")
 
-
-def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
-    # 텍스트를 공백을 기준으로 토큰화
-    words = text.split()
-    for i in range(0, len(words), max_tokens):
-        yield ' '.join(words[i:i+max_tokens])
 
 def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
-    for chunk in split_text_into_tokens(text, max_tokens):
-        yield chunk  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.
+    words = text.split()
+    for i in range(0, len(words), max_tokens):
+        chunk = ' '.join(words[i:i+max_tokens])
+        yield f"data: {chunk}\n\n"
 
 
 def stream_chatgpt(system_prompt, user_prompt):
@@ -88,12 +79,10 @@ def stream_chatgpt(system_prompt, user_prompt):
                 text = chunk.choices[0].delta.content
                 #print("chunk.choices[0]", chunk.choices[0])
                 #print("text:", text, "\n")
-                if text is None: # None type 일 경우 pass 
-                    continue
-                result_txt += str(text)
-
-                yield text
-            print(result_txt)
+                if text:
+                    result_txt += text
+                    yield f"data: {text}\n\n"
+            print("답변 결과:\n", result_txt)
             
         return Response(event_stream(), mimetype='text/event-stream')
     except OpenAIError as e:
@@ -197,21 +186,27 @@ def validate_request_data():
 
 @app.route("/conv", methods=['POST'])
 def llm():
-    params = validate_request_data()  # 공통 함수 호출
+    params = validate_request_data()
     user_input = params['content']
+    user_id = params.get('user_id', 'default_user')  # 예시로 user_id와 thread_id를 받음
+    thread_id = params.get('thread_id', 'default_thread')
+
+    print("user_input:", user_input)
+
+    # 사용자 입력 저장
+    save_conversation(user_id, thread_id, "user", user_input)
 
     # 동기식으로 RAG 기법 적용한 QA 체인 생성
-    response = retriever(user_input)
+    response = retriever.invoke(user_input)
+    print("response type:", type(response))
     print('RAG response:', response)
-    if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다."])  : # 만약 
-        logging.info( f"RAG - user input: {user_input}")
-        print("logging: RAG 답변 ")
-        #return Response(stream_message(response['result']), content_type='text-event') # here
-        return Response(stream_message(response['result']), mimetype='text/event-stream')
-    elif not response['result']: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
+    if response and response != "해당 정보는 제공된 문서들에 포함되어 있지 않습니다.":
+        logging.info(f"RAG - user input: {user_input}")
+        save_conversation(user_id, thread_id, "system", response)
+        return Response(stream_message(response), mimetype='text/event-stream')
+    elif not response:
         logging.error("error" "RAG를 요청 했으나 결과가 없음. 400")
-        raise BadRequest("No response from RAG") # 추후 수정
-
+        raise BadRequest("No response from RAG")
 
     # 날씨, 교통, 그외 주제인지 분류하기 
     topic = topic_classification(user_input)
@@ -222,9 +217,23 @@ def llm():
         return handle_trans_topic(user_input)
     elif topic == "ELSE":
         return handle_else_topic(user_input)
+
     """else:
         logging.error("chat gpt failed to classify: result is None")
         return jsonify({"error": "Topic classification failed"}), 500"""
+        
+        
+@app.route("/history", methods=['GET'])
+def get_history():
+    user_id = request.args.get('user_id')
+    thread_id = request.args.get('thread_id')
+    limit = int(request.args.get('limit', 5))
+
+    if not user_id or not thread_id:
+        raise BadRequest("user_id and thread_id are required parameters")
+
+    conversations = history(user_id, thread_id, limit)
+    return jsonify(conversations)
 
 
 @app.route("/test", methods=['POST'])
@@ -233,14 +242,17 @@ def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식
     user_input = params['content'] 
     system_prompt = """사용자의 질문에 친절하게 대답해줘."""
     result = text_chatgpt(system_prompt, user_input)
-    print("result:", result)
-    return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'
+    print("result(whole text):", result)
+    return Response(stream_with_context(stream_message(result)), mimetype='text/event-stream') # 'text/plain'
+    #return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'
 
+#@app.route("/test/stream", methods=['POST'])
 @app.route("/test/stream", methods=['POST'])
 def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴. 
     params = validate_request_data()
     # 답변 가져오기 
-    user_input = params['content'] 
+    user_input = params['content']
+    user_input = "뮤지컬에 대해서 알려줘"
     system_prompt = "You are a helpful assistant"
     result = stream_chatgpt(system_prompt, user_input) # 
     return result 
@@ -253,12 +265,23 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
         raise BadRequest("No request body")
     elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
         raise BadRequest("No content field in request body or value for content is empty")
-        #abort(500, description="No request body ---- ")
     return jsonify({"result": f"no error:{params['content']}"})
+
+@app.route("/title", methods=['POST'])
+def make_title(): # 대화의 타이틀 생성
+    params = validate_request_data()
+    user_input = params['content'] 
+    system_prompt = """넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘."""
+    title = text_chatgpt(system_prompt, user_input)
+
+    if title is None:
+        return jsonify({"error": "죄송해요. 챗 지피티가 제목을 제대로 가져오지 못했어요."})
+    title = title.strip('"') # 앞뒤의 큰 따옴표 제거
+    return jsonify({"title": title})
 
 
 if __name__ == '__main__':
-    print("app.run 시작")
-    print("PDF 검색기 로드 시작")
-    
+    print("app starts running")
     app.run(port=5001,debug=True)
+    
+    
