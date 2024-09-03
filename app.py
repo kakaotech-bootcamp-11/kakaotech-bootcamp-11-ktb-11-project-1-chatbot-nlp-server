@@ -12,6 +12,7 @@ from find_routes_v2 import get_route_description
 from error_handler import register_error_handlers
 from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
+#from conversation_history import save_conversation, history
 
 # 플라스크 앱 정의
 app = Flask(__name__)
@@ -59,11 +60,12 @@ def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 
 
 
 def stream_chatgpt(system_prompt, user_prompt):
+    # eunma: db 에서 데이터 조회해서, 
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     try:
         response = client.chat.completions.create(
             model=MODEL_VERSION,
-            messages=[
+            messages=[ # 여기에 히스토리 넣기 
                 {"role": "system", "content": system_prompt + "\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요."},
                 {"role": "user", "content": user_prompt}
             ],
@@ -82,6 +84,9 @@ def stream_chatgpt(system_prompt, user_prompt):
                     result_txt += text
                     yield f"data: {text}\n\n"
             print("답변 결과:\n", result_txt)
+            # 답변 결과 DB 에 저장
+            #save_conversation("user123", "thread456", "user", result_txt)
+
             
         return Response(event_stream(), mimetype='text/event-stream')
     except OpenAIError as e:
@@ -175,28 +180,36 @@ def handle_else_topic(user_input):
         result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
         return Response(stream_message(result), content_type='text/plain')"""
 
-def validate_request_data():
+def get_request_data():
     params = request.get_json()
+    print("params:", params)
     if not params:  # JSON 데이터가 없는 경우
         raise BadRequest("No request body")
-    elif 'content' not in params or not params['content'].strip():  # 'content' 필드가 없거나 값이 비어 있는 경우
-        raise BadRequest("No content field in request body or value for content is empty")
-    return params
+    # 변수가 3개 : content, user_id, chat_id
+    if 'content' not in params or not isinstance(params['content'], str) or not params['content'].strip() :  # 'content' 필드가 없거나 값이 비어 있는 경우
+        raise BadRequest("No content field in request body, empty value or invalid value")
+    if 'user_id' not in params or not params['user_id'] or not isinstance(params['user_id'], int):  
+        raise BadRequest("No user_id field in request body, empty value or invalid value")
+    if 'chat_id' not in params or not params['chat_id'] or not isinstance(params['chat_id'], int): 
+        raise BadRequest("No chat_id field in request body, empty value or invalid value")
+    
+    content, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
+    return content, user_id, chat_id 
 
 @app.route("/conv", methods=['POST'])
 def llm():
-    params = validate_request_data()  # 공통 함수 호출
-    user_input = params['content']
-
-    print("user_input:", user_input)
+    user_input, user_id, chat_id = get_request_data()  # 공통 함수 호출
+    print("user_input, user_id, chat_id:", user_input, user_id, chat_id)
 
     # 동기식으로 RAG 기법 적용한 QA 체인 생성
     response = retriever.invoke(user_input)
-    print("response type:", type(response))
+    #print("response type:", type(response))
     print('RAG response:', response)
     #if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다"])  : # 만약 
     if response and response != "해당 정보는 제공된 문서들에 포함되어 있지 않습니다.":
         logging.info( f"RAG - user input: {user_input}")
+        # 답변 결과 DB 에 저장
+        #save_conversation("user123", "thread456", "user", response)
         print("logging: RAG 답변")
         return Response(stream_message(response), mimetype='text/event-stream')
     elif not response: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
