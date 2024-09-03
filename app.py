@@ -180,7 +180,7 @@ def handle_else_topic(user_input):
         result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
         return Response(stream_message(result), content_type='text/plain')"""
 
-def get_request_data():
+def get_request_data(title=None):
     params = request.get_json()
     print("params:", params)
     if not params:  # JSON 데이터가 없는 경우
@@ -188,17 +188,21 @@ def get_request_data():
     # 변수가 3개 : content, user_id, chat_id
     if 'content' not in params or not isinstance(params['content'], str) or not params['content'].strip() :  # 'content' 필드가 없거나 값이 비어 있는 경우
         raise BadRequest("No content field in request body, empty value or invalid value")
-    if 'user_id' not in params or not params['user_id'] or not isinstance(params['user_id'], int):  
-        raise BadRequest("No user_id field in request body, empty value or invalid value")
-    if 'chat_id' not in params or not params['chat_id'] or not isinstance(params['chat_id'], int): 
-        raise BadRequest("No chat_id field in request body, empty value or invalid value")
+    if title is None: # title은 user_id, chat_id 가 필요 없음 
+        if 'user_id' not in params or not params['user_id'] or not isinstance(params['user_id'], int):  
+            raise BadRequest("No user_id field in request body, empty value or invalid value")
+        if 'chat_id' not in params or not params['chat_id'] or not isinstance(params['chat_id'], int): 
+            raise BadRequest("No chat_id field in request body, empty value or invalid value")
     
-    content, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
-    return content, user_id, chat_id 
+    #content, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
+    #return content, user_id, chat_id 
+    return params
 
 @app.route("/conv", methods=['POST'])
 def llm():
-    user_input, user_id, chat_id = get_request_data()  # 공통 함수 호출
+    #user_input, user_id, chat_id = get_request_data()  # 공통 함수 호출
+    params = get_request_data() # request body 를 가져옴
+    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
     print("user_input, user_id, chat_id:", user_input, user_id, chat_id)
 
     # 동기식으로 RAG 기법 적용한 QA 체인 생성
@@ -233,8 +237,8 @@ def llm():
 
 @app.route("/test", methods=['POST'])
 def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달 
-    params = validate_request_data()
-    user_input = params['content'] 
+    params = get_request_data(title=True) # request body 를 가져옴
+    user_input = params['content']
     system_prompt = """사용자의 질문에 친절하게 대답해줘."""
     result = text_chatgpt(system_prompt, user_input)
     print("result(whole text):", result)
@@ -244,10 +248,11 @@ def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식
 #@app.route("/test/stream", methods=['POST'])
 @app.route("/test/stream", methods=['POST'])
 def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴. 
-    params = validate_request_data()
+    #user_input, user_id, chat_id = get_request_data()  # 공통
+    params = get_request_data(title=True) # request body 를 가져옴
+    user_input  = params['content']
+
     # 답변 가져오기 
-    user_input = params['content']
-    user_input = "뮤지컬에 대해서 알려줘"
     system_prompt = "You are a helpful assistant"
     result = stream_chatgpt(system_prompt, user_input) # 
     return result 
@@ -255,7 +260,7 @@ def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답�
 # test function for error handling
 @app.route("/error_handling", methods=['POST'])
 def error_handle(): # 대화의 타이틀 생성 #(params)
-    params = request.get_json()
+    params = get_request_data() # request body 를 가져옴
     if not params : # json = {}
         raise BadRequest("No request body")
     elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
@@ -264,7 +269,7 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
 
 @app.route("/title", methods=['POST'])
 def make_title(): # 대화의 타이틀 생성
-    params = validate_request_data()
+    params = get_request_data(title=True)
     user_input = params['content'] 
     system_prompt = """넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘."""
     title = text_chatgpt(system_prompt, user_input)
