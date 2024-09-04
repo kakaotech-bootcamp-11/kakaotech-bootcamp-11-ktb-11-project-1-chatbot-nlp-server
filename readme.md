@@ -49,7 +49,40 @@
 - airplay가 포트 5000번을 차지하기 때문에, flask 앱이 실행이 되지 않음. 
 - System Preferences -> General -> AirDrop & Handoff -> OFF
 
-
+6. MongoDB 설치 하기.
+ * Mac
+    1. 홈브류 설치 확인. 미설치시에만 아래 코드 실행
+    ```
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+    2. 몽고DB tap 추가
+    ```
+    brew tap mongodb/brew
+    ```
+    3. 몽고 DB 설치
+    ```
+    brew install mongodb-community@7.0
+    ```
+    4. 몽고DB 서비스 시작
+    ```
+    # 백그라운드 자동 실행 설정
+    brew services start mongodb/brew/mongodb-community
+    # 1회성 수동 실행 코드
+    mongod --config /opt/homebrew/etc/mongod.conf --fork
+    ```
+    5. 몽고DB 상태 확인
+    ```
+    brew services list
+    ```
+    6. 몽고DB쉘 실행 : 데이터베이스에 직접 접근하기 위한 명령어
+    ```
+    mongosh
+    ```
+    7. 몽고DB 종료
+    ```
+    brew services stop mongodb/brew/mongodb-community
+    ```
+    
 ## 서비스 실행
 0. RAG 옵션이 바뀌었거나, 문서가 업데이트 되었을 때 
 /data/retrievers/faiss_index 내의 파일들을 삭제해줍니다. 
