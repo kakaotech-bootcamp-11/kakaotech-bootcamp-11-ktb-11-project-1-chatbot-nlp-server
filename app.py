@@ -13,7 +13,7 @@ from error_handler import register_error_handlers
 from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
 from conversation_history import save_conversation, history
-from konlpy.tag import Okt
+#from konlpy.tag import Okt
 from pymongo import MongoClient
 from datetime import datetime
 import pytz
