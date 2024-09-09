@@ -48,9 +48,9 @@ KAKAO_MAP_API_KEY = os.environ.get("KAKAO_MAP_API_KEY1")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 # LLM 변수 정의 
-STREAM_TOKEN_SIZE = 30
+STREAM_TOKEN_SIZE = 1 # 스트림 토큰 단위 default 125
 MODEL_VERSION = "gpt-4o-mini" # "gpt-3.5-turbo"  
-MAX_TOKENS_OUTPUT = 250
+MAX_TOKENS_OUTPUT = 500
 
 
 # 검색할 문서 로드 
@@ -62,11 +62,15 @@ except OpenAIError as e:
 print("검색기 로드 끝")
 
 
-def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
+"""def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
     words = text.split()
     for i in range(0, len(words), max_tokens):
         chunk = ' '.join(words[i:i+max_tokens])
-        yield f"data: {chunk}\n\n"
+        yield f"data: {chunk}\n\n"""
+def stream_message(text):  # 데이터가 1글자 단위로 스트리밍 된다.
+    for char in text:
+        print(char)
+        yield f"data: {char}\n\n"
 
 
 def stream_chatgpt(system_prompt, user_prompt, user_id, chat_id):
@@ -104,6 +108,43 @@ def stream_chatgpt(system_prompt, user_prompt, user_id, chat_id):
             print("답변 결과:\n", result_txt)
             # 답변 결과 DB 에 저장
             save_conversation(user_id, chat_id, "system", result_txt)
+            """ // 토큰 단위로 주는 코드 // 폐기
+            result_txt = ''
+            buffer_txt = ''
+            word_count = 0
+            
+            for chunk in response:
+                text = chunk.choices[0].delta.content
+                print("text:", text)
+                if text:
+                    result_txt += text
+                    buffer_txt += text
+                    word_count += len(text.split())  # 새로운 텍스트의 단어 수 계산
+                    #print("buffered_text: ",buffer_txt)
+                    #print("current word cnt:", len(text.split()))
+
+                    # 30단어를 넘으면 버퍼 내용 전달
+                    if word_count >= STREAM_TOKEN_SIZE:
+                        print("# STREAM_TOKEN_SIZE단어를 넘으면 버퍼 내용 전달")
+                        print("전달된 텍스트: ", buffer_txt)
+                        yield f"data: {buffer_txt}\n\n"
+                        buffer_txt = ''  # 버퍼 초기화
+                        word_count = 0   # 단어 수 초기화
+
+            # 남은 텍스트가 있으면 출력
+            if buffer_txt:
+                print("# 남은 텍스트가 있으면 출력")
+                print("전달된 텍스트: ", buffer_txt)
+                yield f"data: {buffer_txt}\n\n
+            
+            print("답변 결과:\n", result_txt)
+            # 답변 결과 DB에 저장
+            save_conversation(user_id, chat_id, "system", result_txt)
+            
+            
+            """
+
+            
 
             
         return Response(event_stream(), mimetype='text/event-stream')
