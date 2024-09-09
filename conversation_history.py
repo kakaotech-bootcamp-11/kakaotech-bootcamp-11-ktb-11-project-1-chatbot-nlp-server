@@ -1,15 +1,15 @@
-from konlpy.tag import Okt
+# from konlpy.tag import Okt
 from pymongo import MongoClient
 from datetime import datetime
 import pytz
 
 # KoNLPy를 사용하여 간단한 키워드 기반 태그 추출
-okt = Okt()
+#okt = Okt()
 
-def extract_tags(text):
+"""def extract_tags(text):
     # 명사만 추출
     tags = okt.nouns(text)
-    return tags
+    return tags"""
 
 # MongoDB 연결 설정
 client = MongoClient('mongodb://localhost:27017/')
@@ -23,7 +23,7 @@ def save_conversation(user_id, chat_id, role, text):
     current_time = datetime.now(korea_tz).strftime('%Y-%m-%d %H:%M:%S')
 
     # 대화 태그 추출
-    tags = extract_tags(text)
+    # tags = extract_tags(text)
 
     # 대화 내용 저장
     conversation = {
@@ -32,7 +32,7 @@ def save_conversation(user_id, chat_id, role, text):
         "timestamp": current_time,
         "role": role,
         "text": text,
-        "tags": tags  # 태그 저장
+        # "tags": tags  # 태그 저장
     }
     collection.insert_one(conversation)
 
@@ -59,4 +59,4 @@ if __name__ == "__main__":
         print(f"대화 시간: {conversation['timestamp']}")
         print(f"발화 주체: {conversation['role']}")
         print(f"대화 텍스트: {conversation['text']}")
-        print(f"태그: {conversation['tags']}\n")
+        # print(f"태그: {conversation['tags']}\n")
