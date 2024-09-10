@@ -285,3 +285,20 @@ rain
 
   </div>
   </details>
+
+## 서비스 관리
+
+### 사용자 대화 기록 관리
+1. MongoDB Compass 설치
+[링크](https://www.mongodb.com/try/download/compass)
+설치 : MongoDB Compass Download (GUI)
+
+2. 연결하기
+    1. add new connection
+    2. URL : --
+    3. "Advanced Connection Options" 항목의 "Authentication"
+      * username : admin
+      * password : --
+      * Authentication Database : admin
+      
+      ![alt text](image-1.png)
