@@ -2,6 +2,7 @@
 from pymongo import MongoClient
 from datetime import datetime
 import pytz
+import os
 
 # KoNLPy를 사용하여 간단한 키워드 기반 태그 추출
 #okt = Okt()
@@ -11,10 +12,20 @@ import pytz
     tags = okt.nouns(text)
     return tags"""
 
+# 환경 변수에서 MongoDB 연결 URL 가져오기
+mongo_uri = os.getenv('MONGO_URI')
 # MongoDB 연결 설정
-client = MongoClient('mongodb://localhost:27017/')
-db = client['chatbot_db']  # 데이터베이스 이름 설정
-collection = db['chat_history']  # 콜렉션 이름 설정
+try:
+    client = MongoClient(mongo_uri)
+    db = client['chatbot_db']
+    collection = db['chat_history']
+    print("MongoDB 연결 성공")
+except Exception as e:
+    print(f"MongoDB 연결 실패: {str(e)}")
+# # MongoDB 연결 설정
+# client = MongoClient(mongo_uri)
+# db = client['chatbot_db']  # 데이터베이스 이름 설정
+# collection = db['chat_history']  # 콜렉션 이름 설정
 
 
 def save_conversation(user_id, chat_id, role, text):
@@ -49,7 +60,7 @@ def history(user_id, chat_id, limit=5):
 
 # 예시 사용
 if __name__ == "__main__":
-    # 대화 저장 
+    # 대화 저장
     save_conversation("user123", "thread456", "user", "안녕하세요, 오늘 날씨는 어떤가요?")
     save_conversation("user123", "thread456", "system", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
 
