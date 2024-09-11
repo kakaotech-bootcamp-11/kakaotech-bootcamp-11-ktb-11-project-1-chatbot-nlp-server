@@ -290,3 +290,36 @@ rain
 
   </div>
   </details>
+
+<<<<<<< Updated upstream
+## 서비스 관리
+
+### 사용자 대화 기록 관리
+1. MongoDB Compass 설치
+[링크](https://www.mongodb.com/try/download/compass)
+설치 : MongoDB Compass Download (GUI)
+
+2. 연결하기
+    1. add new connection
+    2. URL : --
+    3. "Advanced Connection Options" 항목의 "Authentication"
+      * username : admin
+      * password : --
+      * Authentication Database : admin
+      
+      ![alt text](image-1.png)
+3. 몽고 DB 데이터 로컬에서 확인
+    1. MongoDB 서버 실행 확인
+    ```
+    mongod
+    ```
+    2. MongoDB쉘 접근
+    ```
+    mongo
+    ```
+    3. data 베이스 선택 및 확인
+    ```
+    use chatbot_db  # 데이터베이스 선택
+    show collections  # 콜렉션 목록 확인
+    db.chat_history.find().pretty()  # chat_history 콜렉션의 모든 데이터 확인
+    ```
