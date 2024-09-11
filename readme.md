@@ -24,9 +24,14 @@
 
 2. postman에 가입한다. [링크](https://www.postman.com/)  
 
-3. RAG에서 검색하고 싶은 PDF 파일 구비
-(11조 -> 보안 문제로 지은에게 문의 주시면 pdf 파일을 드리겠습니다. )
-- pdf 파일을 data 디렉토리 내에 넣음. 
+3. ~~RAG에서 검색하고 싶은 PDF 파일 구비~~   
+- ~~11조 -> 보안 문제로 지은에게 문의 주시면 pdf 파일을 드리겠습니다~~
+- ~~pdf 파일을 data 디렉토리 내에 넣음. ~~
+
+
+4. mongo DB 설치 
+[참고](https://www.mongodb.com/ko-kr/docs/manual/tutorial/install-mongodb-on-os-x/)
+
 
 
 4. API key 발급 받기
@@ -45,13 +50,13 @@
     .gitignore 파일에 .env 파일명 추가하기
     : git에 업로드할 에정이라면, .gitignore 파일에 .env를 추가하여 api 키가 외부에 노출되지 않게 해야함.   
 
-5. (SKIP) 맥북이라면 airplay OFF를 꺼주세요. 
-- airplay가 포트 5000번을 차지하기 때문에, flask 앱이 실행이 되지 않음. 
-- System Preferences -> General -> AirDrop & Handoff -> OFF
+~~5. 맥북이라면 airplay OFF를 꺼주세요. ~~  
+- ~~airplay가 포트 5000번을 차지하기 때문에, flask 앱이 실행이 되지 않음.~~  
+- ~~System Preferences -> General -> AirDrop & Handoff -> OFF~~
 
 
 ## 서비스 실행
-0. RAG 옵션이 바뀌었거나, 문서가 업데이트 되었을 때 
+0. RAG 옵션이 바뀌었거나, rag markdown 문서가 업데이트 되었을 때 
 /data/retrievers/faiss_index 내의 파일들을 삭제해줍니다. 
 
 1. app.py 의 file_path 나의 pdf 이름으로 바꿔줌 
