@@ -22,7 +22,7 @@ pipeline {
             agent { label '' }
                     steps {
                         script {
-                            // 이미지 태그를 생성하고, kaniko-pod-be.yaml 파일을 동적으로 수정
+                            // 이미지 태그를 생성하고, nlp-kaniko-ci.yaml 파일을 동적으로 수정
                             sh """
                             sed -i 's|--destination=.*|--destination=docker.io/${DOCKER_REPO}:${GIT_COMMIT_SHORT}"]|' ${KANIKO_POD_YAML}
                             """
