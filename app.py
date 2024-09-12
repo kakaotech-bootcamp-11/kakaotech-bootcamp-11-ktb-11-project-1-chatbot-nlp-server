@@ -10,8 +10,7 @@ from werkzeug.exceptions import BadRequest
 from conversation_history import save_conversation
 from pymongo import MongoClient
 from utils import get_request_data, stream_message, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
-
-
+from mongo_client import get_mongo_client
 
 
 
@@ -30,6 +29,7 @@ logging.basicConfig(
 
 # 환경 변수에서 MongoDB 연결 URL 가져오기
 # mongo_uri = os.getenv('MONGO_URI')
+client, db, collection = get_mongo_client()
 
 
 
@@ -53,14 +53,21 @@ except OpenAIError as e:
     raise e
 print("=======검색기 로드 끝========")
 
+
+# 
+client, db, collection = get_mongo_client()
+
 # 모델의 응답을 스트리밍하기 위한 제너레이터 함수
-def generate_response_stream(user_input):
+def generate_response_stream(user_id, chat_id, user_input):
+    answer_text = ''
     # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)
     for chunk in retriever.stream(user_input):  # stream을 사용하여 스트리밍 처리
         # formatted_chunk = chunk.replace("\n", "\\n")
         # print(formatted_chunk)
+        answer_text += chunk
         yield chunk
         # print(chunk)
+    save_conversation(collection, user_id, chat_id, "system", answer_text)
 
 @app.route("/nlp-api/conv", methods=['POST'])
 def llm():
@@ -68,11 +75,9 @@ def llm():
     user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
     print("user_input, user_id, chat_id:", user_input, user_id, chat_id)
 
-    save_conversation(user_id, chat_id, "user", user_input)
+    save_conversation(collection, user_id, chat_id, "user", user_input)
 
-    #print(faiss_db.similarity_search_with_score(user_input, k=1))
-
-    response_generator = generate_response_stream(user_input)
+    response_generator = generate_response_stream(user_id, chat_id, user_input)
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
 @app.route("/nlp-api/title", methods=['POST'])
@@ -89,22 +94,22 @@ def make_title(): # 대화의 타이틀 생성
 
 @app.route("/nlp-api/test", methods=['POST'])
 def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달
-    params = get_request_data(title=True) # request body 를 가져옴
-    user_input = params['content']
+    params = get_request_data() # request body 를 가져옴
+    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
     system_prompt = """사용자의 질문에 친절하게 대답해줘."""
     result = text_chatgpt(system_prompt, user_input)
     print("result(whole text):", result)
-    response_generator = generate_response_stream(user_input)
+    response_generator = generate_response_stream(user_id, chat_id, user_input)
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
 @app.route("/nlp-api/test/stream", methods=['POST'])
 def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴.
     #user_input, user_id, chat_id = get_request_data()  # 공통
-    params = get_request_data(title=True) # request body 를 가져옴
-    user_input, user_id, chat_id  = params['content'], params['user_id'], params['chat_id']
+    params = get_request_data() # request body 를 가져옴
+    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
 
     # 답변 가져오기
-    response_generator = generate_response_stream(user_input)
+    response_generator = generate_response_stream(user_id, chat_id, user_input)
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
 # test function for error handling
