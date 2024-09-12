@@ -54,8 +54,6 @@ except OpenAIError as e:
 print("=======검색기 로드 끝========")
 
 
-# 
-client, db, collection = get_mongo_client()
 
 # 모델의 응답을 스트리밍하기 위한 제너레이터 함수
 def generate_response_stream(user_id, chat_id, user_input):
