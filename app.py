@@ -7,7 +7,7 @@ from document_retriever import my_retriever
 from error_handler import register_error_handlers
 from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
-from conversation_history import save_conversation
+from conversation_history import save_conversation, history
 from pymongo import MongoClient
 from utils import get_request_data, stream_message, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
 from mongo_client import get_mongo_client
@@ -58,6 +58,16 @@ print("=======검색기 로드 끝========")
 # 모델의 응답을 스트리밍하기 위한 제너레이터 함수
 def generate_response_stream(user_id, chat_id, user_input):
     answer_text = ''
+    my_history = history(collection, user_id, chat_id, limit=3)
+    n = 0
+    for h in my_history:
+        n+=1
+        print("히스토리;", h)
+        print("text:", h['text'])
+        user_input += ". 요청 사항: 기존 대화 내역을 반영해줘. 기존 대화 내역은 다음과 같아: " + h['role']+":"+h['text']+"\n"
+    print("user_input:", user_input)
+    print("히스토리 개수:", n)
+
     # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)
     for chunk in retriever.stream(user_input):  # stream을 사용하여 스트리밍 처리
         # formatted_chunk = chunk.replace("\n", "\\n")
@@ -66,6 +76,7 @@ def generate_response_stream(user_id, chat_id, user_input):
         yield chunk
         # print(chunk)
     save_conversation(collection, user_id, chat_id, "system", answer_text)
+    print("최종 답변:", answer_text)
 
 @app.route("/nlp-api/conv", methods=['POST'])
 def llm():

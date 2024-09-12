@@ -50,7 +50,7 @@ def save_conversation(collection, user_id, chat_id, role, text):
     collection.insert_one(conversation)
     
 
-def history(collection, user_id, chat_id, limit=5): # 대화 기록 조회
+def history(collection, user_id, chat_id, limit=2): # 대화 기록 조회
     
     # 대화 기록 불러오기
     query = {
