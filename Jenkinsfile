@@ -63,7 +63,7 @@ pipeline {
                     // Kubernetes 배포
                     sh """
                     kubectl set image deployment/nlp-deployment \
-                    -n ktb-chatbot backend=docker.io/${DOCKER_REPO}:${GIT_COMMIT_SHORT}
+                    -n ktb-chatbot nlp=docker.io/${DOCKER_REPO}:${GIT_COMMIT_SHORT}
                     kubectl rollout status deployment/nlp-deployment -n ktb-chatbot
                     kubectl delete -f ${KANIKO_POD_YAML} -n ${K8S_NAMESPACE}
                     """
