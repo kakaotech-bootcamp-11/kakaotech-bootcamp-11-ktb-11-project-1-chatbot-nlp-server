@@ -28,16 +28,15 @@ except Exception as e:
 # db = client['chatbot_db']  # 데이터베이스 이름 설정
 # collection = db['chat_history']  # 콜렉션 이름 설정
 
-client, db, collection = get_mongo_client()
 
+# collection
 
-def save_conversation(user_id, chat_id, role, text):
+def save_conversation(collection, user_id, chat_id, role, text):
     # 현재 시간을 한국 시간으로 설정
     korea_tz = pytz.timezone('Asia/Seoul')
     current_time = datetime.now(korea_tz).strftime('%Y-%m-%d %H:%M:%S')
 
-    # 대화 태그 추출
-    # tags = extract_tags(text)
+    #client, db, collection = get_mongo_client()
 
     # 대화 내용 저장
     conversation = {
@@ -49,14 +48,17 @@ def save_conversation(user_id, chat_id, role, text):
         # "tags": tags  # 태그 저장
     }
     collection.insert_one(conversation)
+    
 
-def history(user_id, chat_id, limit=5):
+def history(collection, user_id, chat_id, limit=5): # 대화 기록 조회
+    
     # 대화 기록 불러오기
     query = {
         "user_id": user_id,
         "chat_id": chat_id
     }
     conversations = collection.find(query).sort("timestamp", -1).limit(limit)
+    print("history(): conversations:", conversations)
 
     # 내림차순으로 가져온 후, 이를 다시 뒤집어 최신순으로 반환
     return list(conversations)[::-1]
