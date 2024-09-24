@@ -11,6 +11,9 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain_core.prompts import ChatPromptTemplate
+from conversation_history import history
+from mongo_client import get_mongo_client
 
 import pprint
 import json
@@ -107,7 +110,9 @@ def create_qa_chain(ensemble_retriever):
 
         #Answer:"""
     )
-    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0, streaming=True)
+
+
+    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.2, streaming=True, max_tokens = 150)
     multiquery_retriever = MultiQueryRetriever.from_llm(  # 
         retriever=ensemble_retriever,
         llm=llm,
