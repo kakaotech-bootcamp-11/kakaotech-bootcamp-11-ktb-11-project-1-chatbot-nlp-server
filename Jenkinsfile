@@ -78,14 +78,14 @@ pipeline {
             success {
                 echo 'Build and push successful!'
                 withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
-                    discordSend message: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 성공 ✅",
+                    discordSend description: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 성공",
                                 webhookURL: DISCORD
                 }
             }
             failure {
                 echo 'Build or deployment failed. Check logs for details.'
                 withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
-                    discordSend message: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 실패 ❌",
+                    discordSend description: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 실패",
                                 webhookURL: DISCORD
                 }
             }
