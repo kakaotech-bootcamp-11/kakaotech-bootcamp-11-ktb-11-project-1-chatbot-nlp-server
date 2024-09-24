@@ -35,7 +35,7 @@ pipeline {
                     }
                 }
         stage('Deploy Kaniko Pod') {
-       agent { label '' }
+            agent { label '' }
                     steps {
                         script {
                             // 동적으로 수정된 Kaniko Pod YAML 파일을 Kubernetes에 적용
@@ -77,11 +77,10 @@ pipeline {
                         link: env.BUILD_URL, result: currentBuild.currentResult,
                         title: "${env.JOB_NAME} : ${currentBuild.displayName} 성공",
                         webhookURL: "$DISCORD"
-            }
-            agent { label '' }
-            steps {
+                        }
+                agent { label '' }
                 script {
-                    // Kaniko Pod 삭제
+                        // Kaniko Pod 삭제
                     sh """
                     kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
                     """
@@ -90,24 +89,23 @@ pipeline {
             failure {
                 echo 'Build or deployment failed. Check logs for details.'
                 withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
-                                        discordSend description: """
-                                        제목 : ${currentBuild.displayName}
-                                        결과 : ${currentBuild.result}
-                                        실행 시간 : ${currentBuild.duration / 1000}s
-                                        로그 : ${kanikolog.take(1500)} //1500자 이내로 kaniko build 한 로그 기록 출려하도록 함
-                                        """,
-                                        link: env.BUILD_URL, result: currentBuild.currentResult,
-                                        title: "${env.JOB_NAME} : ${currentBuild.displayName} 실패",
-                                        webhookURL: "$DISCORD"
-                            }
-                agent { label '' }
-                script {
-                    // Kaniko Pod의 로그 확인
-                    sh """
-                    kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}
-                    kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
-                    """
-            }
+                    discordSend description: """
+                    제목 : ${currentBuild.displayName}
+                    결과 : ${currentBuild.result}
+                    실행 시간 : ${currentBuild.duration / 1000}s
+                    로그 : ${kanikolog.take(1500)} //1500자 이내로 kaniko build 한 로그 기록 출려하도록 함
+                    """,
+                    link: env.BUILD_URL, result: currentBuild.currentResult,
+                    title: "${env.JOB_NAME} : ${currentBuild.displayName} 실패",
+                    webhookURL: "$DISCORD"
+                    }
+            agent { label '' }
+            script {
+             // Kaniko Pod의 로그 확인
+            sh """
+            kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}
+            kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
+            """
         }
     }
 }
