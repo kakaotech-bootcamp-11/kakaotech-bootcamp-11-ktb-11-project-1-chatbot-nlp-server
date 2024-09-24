@@ -1,5 +1,5 @@
 pipeline {
-    agent none
+    agent any
     environment {
         DOCKER_REPO = "ktb11chatbot/ktb-11-project-1-chatbot-nlp"
         GIT_BRANCH = 'main'  // 빌드할 Git 브랜치
@@ -12,7 +12,6 @@ pipeline {
     }
     stages {
         stage('Checkout Source Code') {
-            agent any
             steps {
                 // Git 소스 코드 체크아웃
                 checkout scm
@@ -23,7 +22,6 @@ pipeline {
             }
         }
         stage('Update Kaniko YAML') {
-            agent any
             steps {
                 script {
                     // Kaniko YAML 파일에서 이미지 태그 업데이트
@@ -34,7 +32,6 @@ pipeline {
             }
         }
         stage('Deploy Kaniko Pod') {
-            agent any
             steps {
                 script {
                     // 기존 Kaniko Pod 삭제 후 새로운 Kaniko Pod 배포
@@ -46,7 +43,6 @@ pipeline {
             }
         }
         stage('Wait for Kaniko Build') {
-            agent any
             steps {
                 script {
                     // Kaniko Pod가 완료될 때까지 대기
@@ -66,7 +62,6 @@ pipeline {
             }
         }
         stage('Deploy to Kubernetes') {
-            agent any
             steps {
                 script {
                     // Kubernetes에 이미지 배포
@@ -80,21 +75,6 @@ pipeline {
         }
     }
     post {
-        always {
-            script {
-                try {
-                    // Kaniko Pod 로그 캡처
-                    def kanikolog = sh(script: "kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}", returnStdout: true)
-                    echo "Kaniko Logs:\n${kanikolog}"
-                } catch (e) {
-                    echo "Failed to get Kaniko logs: ${e}"
-                }
-                // Kaniko Pod 삭제
-                sh """
-                kubectl delete pod ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE} --ignore-not-found
-                """
-            }
-        }
         success {
             echo 'Build and push successful!'
             withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
