@@ -65,44 +65,46 @@ pipeline {
     }
     post {
         always {
-            script {
-                try {
-                    // Capture the Kaniko pod logs
-                    currentBuild.kanikolog = sh(script: "kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}", returnStdout: true)
-                } catch (e) {
-                    echo "Failed to get Kaniko logs: ${e}"
-                    currentBuild.kanikolog = "Kaniko logs not available."
+                node {
+                    script {
+                        try {
+                            // Kaniko 포드 로그를 캡처합니다.
+                            kanikolog = sh(script: "kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}", returnStdout: true)
+                        } catch (e) {
+                            echo "Failed to get Kaniko logs: ${e}"
+                            kanikolog = "Kaniko logs not available."
+                        }
+                        // Kaniko 포드를 삭제합니다.
+                        sh """
+                        kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE} || true
+                        """
+                    }
                 }
-                // Delete the Kaniko pod
-                sh """
-                kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE} || true
-                """
-            }
-        }
         success {
             echo 'Build and push successful!'
             withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
                 discordSend description: """
-                Title: ${currentBuild.displayName}
-                Result: ${currentBuild.result}
-                Execution Time: ${currentBuild.duration / 1000}s
+                제목: ${currentBuild.displayName}
+                결과: ${currentBuild.result}
+                실행 시간: ${currentBuild.duration / 1000}s
                 """,
                 link: env.BUILD_URL, result: currentBuild.currentResult,
                 title: "${env.JOB_NAME} : ${currentBuild.displayName} Success",
-                webhookURL: "$DISCORD"
+                webhookURL: DISCORD
             }
         }
         failure {
             echo 'Build or deployment failed. Check logs for details.'
             withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
                 discordSend description: """
-                Title: ${currentBuild.displayName}
-                Result: ${currentBuild.result}
-                Execution Time: ${currentBuild.duration / 1000}s
+                제목: ${currentBuild.displayName}
+                결과: ${currentBuild.result}
+                실행 시간: ${currentBuild.duration / 1000}s
                 """,
-                link: env.BUILD_URL, result: currentBuild.currentResult,
+                link: env.BUILD_URL,
+                result: 'FAILURE',
                 title: "${env.JOB_NAME} : ${currentBuild.displayName} Failure",
-                webhookURL: "$DISCORD"
+                webhookURL: DISCORD
             }
         }
     }
