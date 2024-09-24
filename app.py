@@ -140,4 +140,4 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
 
 if __name__ == '__main__':
     print("app starts running")
-    app.run(port=5002,debug=True)
+    app.run(port=5001,debug=True)
