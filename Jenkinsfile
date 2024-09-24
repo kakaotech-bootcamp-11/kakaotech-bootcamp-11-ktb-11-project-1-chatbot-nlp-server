@@ -86,7 +86,6 @@ pipeline {
                 Title: ${currentBuild.displayName}
                 Result: ${currentBuild.result}
                 Execution Time: ${currentBuild.duration / 1000}s
-                Logs: ${currentBuild.kanikolog.take(1500)} // Displays up to 1500 characters of the Kaniko build logs
                 """,
                 link: env.BUILD_URL, result: currentBuild.currentResult,
                 title: "${env.JOB_NAME} : ${currentBuild.displayName} Success",
@@ -100,7 +99,6 @@ pipeline {
                 Title: ${currentBuild.displayName}
                 Result: ${currentBuild.result}
                 Execution Time: ${currentBuild.duration / 1000}s
-                Logs: ${currentBuild.kanikolog.take(1500)} // Displays up to 1500 characters of the Kaniko build logs
                 """,
                 link: env.BUILD_URL, result: currentBuild.currentResult,
                 title: "${env.JOB_NAME} : ${currentBuild.displayName} Failure",
