@@ -1,7 +1,7 @@
 
 import logging
 import os
-from flask import Flask,  jsonify, Response
+from flask import Flask,  jsonify, Response, stream_with_context
 from flask_cors import CORS
 from document_retriever import my_retriever
 from error_handler import register_error_handlers
@@ -9,8 +9,9 @@ from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
 from conversation_history import save_conversation, history
 from pymongo import MongoClient
-from utils import get_request_data, stream_message, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
+from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
 from mongo_client import get_mongo_client
+import json
 
 
 
@@ -53,8 +54,6 @@ except OpenAIError as e:
     raise e
 print("=======검색기 로드 끝========")
 
-
-
 # 모델의 응답을 스트리밍하기 위한 제너레이터 함수
 def generate_response_stream(user_id, chat_id, user_input):
     my_history = history(collection, user_id, chat_id, limit=4)
@@ -73,10 +72,10 @@ def generate_response_stream(user_id, chat_id, user_input):
     # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)
     answer_text = ''
     for chunk in retriever.stream(input_txt):  # stream을 사용하여 스트리밍 처리
-        # formatted_chunk = chunk.replace("\n", "\\n")
-        # print(formatted_chunk)
+        print("chunk:", chunk)
         answer_text += chunk
-        yield chunk
+        chunk_json = json.dumps({"text": chunk}, ensure_ascii=False)
+        yield f"data: {chunk_json}\n\n" # "data": ... \n\n 을 
         # print(chunk)
     # 질문 & 응답 저장 
     save_conversation(collection, user_id, chat_id, "user", user_input)
@@ -92,7 +91,8 @@ def llm():
     #save_conversation(collection, user_id, chat_id, "user", user_input)
 
     response_generator = generate_response_stream(user_id, chat_id, user_input)
-    return Response(stream_message(response_generator), mimetype='text/event-stream')
+    return Response(stream_with_context(response_generator), mimetype='text/event-stream', )
+    #return Response(stream_message(response_generator), mimetype='application/json')
 
 @app.route("/nlp-api/title", methods=['POST'])
 def make_title(): # 대화의 타이틀 생성
