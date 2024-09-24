@@ -78,7 +78,7 @@ pipeline {
                         title: "${env.JOB_NAME} : ${currentBuild.displayName} 성공",
                         webhookURL: "$DISCORD"
                         }
-                agent { label '' }
+//                 agent { label '' }
                 script {
                         // Kaniko Pod 삭제
                     sh """
@@ -99,7 +99,7 @@ pipeline {
                     title: "${env.JOB_NAME} : ${currentBuild.displayName} 실패",
                     webhookURL: "$DISCORD"
                     }
-                agent { label '' }
+//                 agent { label '' }
                 script {
                  // Kaniko Pod의 로그 확인
                 sh """
