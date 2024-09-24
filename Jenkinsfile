@@ -75,33 +75,19 @@ pipeline {
         }
     }
     post {
-        success {
-            echo 'Build and push successful!'
-            withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
-                discordSend description: """
-                제목: ${currentBuild.displayName}
-                결과: ${currentBuild.result}
-                실행 시간: ${currentBuild.durationString}
-                """,
-                link: env.BUILD_URL,
-                result: 'SUCCESS',
-                title: "${env.JOB_NAME} : ${currentBuild.displayName} 성공",
-                webhookURL: DISCORD
+            success {
+                echo 'Build and push successful!'
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    discordSend message: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 성공 ✅",
+                                webhookURL: DISCORD
+                }
             }
-        }
-        failure {
-            echo 'Build or deployment failed. Check logs for details.'
-            withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
-                discordSend description: """
-                제목: ${currentBuild.displayName}
-                결과: ${currentBuild.result}
-                실행 시간: ${currentBuild.durationString}
-                """,
-                link: env.BUILD_URL,
-                result: 'FAILURE',
-                title: "${env.JOB_NAME} : ${currentBuild.displayName} 실패",
-                webhookURL: DISCORD
+            failure {
+                echo 'Build or deployment failed. Check logs for details.'
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    discordSend message: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} 실패 ❌",
+                                webhookURL: DISCORD
+                }
             }
         }
     }
-}
