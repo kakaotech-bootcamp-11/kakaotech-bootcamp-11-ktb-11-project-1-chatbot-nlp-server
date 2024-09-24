@@ -80,6 +80,7 @@ pipeline {
                         """
                     }
                 }
+            }
         success {
             echo 'Build and push successful!'
             withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
