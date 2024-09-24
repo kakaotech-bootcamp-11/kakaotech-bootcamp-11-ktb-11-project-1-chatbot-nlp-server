@@ -62,9 +62,8 @@ def generate_response_stream(user_id, chat_id, user_input):
     history_prompt = ""
     if len(my_history) >  0: # 기존 대화 내역이 있음. 
 
-        history_prompt = " 이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
+        history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
         for h in my_history:
-            n+=1
             history_prompt +=  h['role']+":"+h['text']+"\n"
         history_prompt += '```'
     print("원래 사용자 인풋:\n", user_input, "="*10)
