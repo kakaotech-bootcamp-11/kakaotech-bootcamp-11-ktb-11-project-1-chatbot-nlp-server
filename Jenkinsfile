@@ -99,13 +99,14 @@ pipeline {
                     title: "${env.JOB_NAME} : ${currentBuild.displayName} 실패",
                     webhookURL: "$DISCORD"
                     }
-            agent { label '' }
-            script {
-             // Kaniko Pod의 로그 확인
-            sh """
-            kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}
-            kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
-            """
-        }
-    }
-}
+                agent { label '' }
+                script {
+                 // Kaniko Pod의 로그 확인
+                sh """
+                kubectl logs ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE}
+                kubectl delete -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
+                """
+            }//script
+        }//failure
+    }//post
+}//pipeline
