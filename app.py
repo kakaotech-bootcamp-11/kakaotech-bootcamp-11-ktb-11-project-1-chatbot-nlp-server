@@ -82,7 +82,7 @@ def generate_response_stream(user_id, chat_id, user_input):
     save_conversation(collection, user_id, chat_id, "system", answer_text)
     print("최종 답변:", answer_text)
 
-@app.route("/nlp-api/conv", methods=['POST'])
+@app.route("/nlp-api/test/conv", methods=['POST'])
 def llm():
     params = get_request_data() # request body 를 가져옴
     user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
@@ -93,7 +93,7 @@ def llm():
     response_generator = generate_response_stream(user_id, chat_id, user_input)
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
-@app.route("/nlp-api/title", methods=['POST'])
+@app.route("/nlp-api/test/title", methods=['POST'])
 def make_title(): # 대화의 타이틀 생성
     params = get_request_data(title=True)
     user_input = params['content']
@@ -105,7 +105,7 @@ def make_title(): # 대화의 타이틀 생성
     title = title.strip('"') # 앞뒤의 큰 따옴표 제거
     return jsonify({"title": title})
 
-@app.route("/nlp-api/test", methods=['POST'])
+@app.route("/nlp-api/test/test", methods=['POST'])
 def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달
     params = get_request_data() # request body 를 가져옴
     user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
@@ -115,7 +115,7 @@ def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식
     response_generator = generate_response_stream(user_id, chat_id, user_input)
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
-@app.route("/nlp-api/test/stream", methods=['POST'])
+@app.route("/nlp-api/test/test/stream", methods=['POST'])
 def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴.
     #user_input, user_id, chat_id = get_request_data()  # 공통
     params = get_request_data() # request body 를 가져옴
@@ -126,7 +126,7 @@ def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답�
     return Response(stream_message(response_generator), mimetype='text/event-stream')
 
 # test function for error handling
-@app.route("/nlp-api/error_handling", methods=['POST'])
+@app.route("/nlp-api/test/error_handling", methods=['POST'])
 def error_handle(): # 대화의 타이틀 생성 #(params)
     params = get_request_data() # request body 를 가져옴
     if not params : # json = {}
@@ -139,4 +139,4 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
 
 if __name__ == '__main__':
     print("app starts running")
-    app.run(port=5001,debug=True)
+    app.run(port=5002,debug=True)
