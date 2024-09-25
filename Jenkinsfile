@@ -26,7 +26,7 @@ pipeline {
                 script {
                     // Kaniko YAML 파일에서 이미지 태그 업데이트
                     sh """
-                    sed -i 's|--destination=.*|--destination=docker.io/${DOCKER_REPO}:${GIT_COMMIT_SHORT}",|' ${KANIKO_POD_YAML}
+                    sed -i 's|--destination=.*|--destination=docker.io/${env.DOCKER_REPO}:${env.GIT_COMMIT_SHORT}",|' ${env.KANIKO_POD_YAML}
                     """
                 }
             }
@@ -36,8 +36,8 @@ pipeline {
                 script {
                     // 기존 Kaniko Pod 삭제 후 새로운 Kaniko Pod 배포
                     sh """
-                    kubectl delete pod ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE} --ignore-not-found
-                    kubectl create -f ${KANIKO_POD_YAML} -n ${JENKINS_NAMESPACE}
+                    kubectl delete pod ${env.KANIKO_POD_NAME} -n ${env.JENKINS_NAMESPACE} --ignore-not-found
+                    kubectl create -f ${env.KANIKO_POD_YAML} -n ${env.JENKINS_NAMESPACE}
                     """
                 }
             }
@@ -48,13 +48,13 @@ pipeline {
                     // Kaniko Pod가 완료될 때까지 대기
                     timeout(time: 15, unit: 'MINUTES') {
                         waitUntil {
-                            def status = sh(script: "kubectl get pod ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE} -o jsonpath='{.status.phase}'", returnStdout: true).trim()
+                            def status = sh(script: "kubectl get pod ${env.KANIKO_POD_NAME} -n ${env.JENKINS_NAMESPACE} -o jsonpath='{.status.phase}'", returnStdout: true).trim()
                             echo "Kaniko Pod Status: ${status}"
                             return (status == 'Succeeded') || (status == 'Failed')
                         }
                     }
                     // 최종 상태 확인
-                    def finalStatus = sh(script: "kubectl get pod ${KANIKO_POD_NAME} -n ${JENKINS_NAMESPACE} -o jsonpath='{.status.phase}'", returnStdout: true).trim()
+                    def finalStatus = sh(script: "kubectl get pod ${env.KANIKO_POD_NAME} -n ${env.JENKINS_NAMESPACE} -o jsonpath='{.status.phase}'", returnStdout: true).trim()
                     if (finalStatus != 'Succeeded') {
                         error "Kaniko build failed with status: ${finalStatus}"
                     }
@@ -66,9 +66,9 @@ pipeline {
                 script {
                     // Kubernetes에 이미지 배포
                     sh """
-                    kubectl set image deployment/${DEPLOYMENT_NAME} \
-                    -n ${DEPLOYMENT_NAMESPACE} ${DEPLOYMENT_CONTAINER_NAME}=docker.io/${DOCKER_REPO}:${GIT_COMMIT_SHORT}
-                    kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${DEPLOYMENT_NAMESPACE}
+                    kubectl set image deployment/${env.DEPLOYMENT_NAME} \
+                    -n ${env.DEPLOYMENT_NAMESPACE} ${env.DEPLOYMENT_CONTAINER_NAME}=docker.io/${env.DOCKER_REPO}:${env.GIT_COMMIT_SHORT}
+                    kubectl rollout status deployment/${env.DEPLOYMENT_NAME} -n ${env.DEPLOYMENT_NAMESPACE}
                     """
                 }
             }
