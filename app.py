@@ -59,6 +59,7 @@ def generate_response_stream(user_id, chat_id, user_input):
     my_history = history(collection, user_id, chat_id, limit=4) # 최근 것부터 불러움?
     # Construct the context for the LLM by passing the history along with the prompt
     context = []
+    context.append({"role": 'system', "content": "사용자 질문에 답변해줘. 기존 대화 내역이 필요하면, 참고해줘. 필요하지 않으면 참고하지 말아줘."})
     context.append({"role": 'user', "content": user_input})
     for h in reversed(my_history):
         context.append({"role": h["role"], "content": h["text"]})
@@ -111,6 +112,7 @@ def make_title(): # 대화의 타이틀 생성
     title = title.strip('"') # 앞뒤의 큰 따옴표 제거
     return jsonify({"title": title})
 
+'''
 @app.route("/nlp-api/test", methods=['POST'])
 def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달
     params = get_request_data() # request body 를 가져옴
@@ -139,7 +141,7 @@ def error_handle(): # 대화의 타이틀 생성 #(params)
         raise BadRequest("No request body")
     elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
         raise BadRequest("No content field in request body or value for content is empty")
-    return jsonify({"result": f"no error:{params['content']}"})
+    return jsonify({"result": f"no error:{params['content']}"})'''
 
 
 
