@@ -61,7 +61,13 @@ def generate_response_stream(user_id, chat_id, user_input):
     history_prompt = ""
     if len(my_history) >  0: # 기존 대화 내역이 있음. 
 
-        history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
+        #history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
+
+        history_prompt = """
+                        When answering this question, refer to the existing conversation history below if needed.\n",
+                        "If the conversation history is not relevant or helpful for this question, proceed without referencing it.\n",
+                        "existing conversation history: ```
+                        """
         for h in my_history:
             history_prompt +=  h['role']+":"+h['text']+"\n"
         history_prompt += '```'
