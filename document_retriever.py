@@ -112,7 +112,7 @@ def create_qa_chain(ensemble_retriever):
     )
 
 
-    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.2, streaming=True) # , max_tokens = 150)
+    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.0, streaming=True) # , max_tokens = 150)
     multiquery_retriever = MultiQueryRetriever.from_llm(  # 
         retriever=ensemble_retriever,
         llm=llm,
