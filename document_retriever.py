@@ -22,11 +22,15 @@ import ssl
 from dotenv import load_dotenv
 
 def load_md_files(file_path): # file path 내의 모든 md 파일을 읽어 문서 데이터를 가져온다. 
-    # 해당 폴더 내의 모든 .md 파일을 가져오기
-    loader = TextLoader(file_path)
-    documents = loader.load()  
+    # UTF-8로 파일을 직접 읽기
+    with open(file_path, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    # 문서 객체 생성
+    documents = [Document(page_content=text)]
+    
     print(f"Loaded {len(documents)} documents from the MD.")
-    print("len(docs):", len(documents) )
+    print("len(docs):", len(documents))
 
     return documents
 

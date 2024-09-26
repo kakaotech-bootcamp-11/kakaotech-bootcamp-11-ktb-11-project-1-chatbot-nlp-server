@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
 from mongo_client import get_mongo_client
 import json
-
+from difflib import SequenceMatcher
 
 
 # 플라스크 앱 정의
@@ -59,12 +59,19 @@ def generate_response_stream(user_id, chat_id, user_input):
     my_history = history(collection, user_id, chat_id, limit=4)
 
     history_prompt = ""
-    if len(my_history) >  0: # 기존 대화 내역이 있음. 
+    if len(my_history) > 0:  # 기존 대화 내역이 있으면
+        # 가장 최근 대화와 현재 질문이 관련 있는지 확인
+        last_conversation = my_history[-1]['text']  # 가장 최근 대화
+        if is_related_to_previous_conversation(user_input, last_conversation):
+            history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
+            for h in my_history:
+                history_prompt += h['role'] + ":" + h['text'] + "\n"
+            history_prompt += '```'
+        else:
+            print("직전 대화와 연관이 없으므로 참고하지 않음.")
+    else:
+        print("이전 대화 내역이 없습니다.")
 
-        history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
-        for h in my_history:
-            history_prompt +=  h['role']+":"+h['text']+"\n"
-        history_prompt += '```'
     print("원래 사용자 인풋:\n", user_input, "="*10)
     print("히스토리 프롬프트:\n", history_prompt, "="*10)
 
@@ -75,12 +82,22 @@ def generate_response_stream(user_id, chat_id, user_input):
         print("chunk:", chunk)
         answer_text += chunk
         chunk_json = json.dumps({"text": chunk}, ensure_ascii=False)
-        yield f"data: {chunk_json}\n\n" # "data": ... \n\n 을 
-        # print(chunk)
-    # 질문 & 응답 저장 
+        yield f"data: {chunk_json}\n\n"
+
+    # 질문 & 응답 저장
     save_conversation(collection, user_id, chat_id, "user", user_input)
     save_conversation(collection, user_id, chat_id, "system", answer_text)
     print("최종 답변:", answer_text)
+    
+def is_related_to_previous_conversation(user_input, previous_conversation):
+    # 문장 유사도를 기반으로 연관성 판단
+    similarity_threshold = 0.3  # 유사도 임계값 (0~1)
+    similarity = SequenceMatcher(None, user_input, previous_conversation).ratio()
+    
+    print(f"유사도: {similarity}")  # 유사도를 출력하여 확인할 수 있음
+    
+    return similarity > similarity_threshold
+
 
 @app.route("/nlp-api/conv", methods=['POST'])
 def llm():
