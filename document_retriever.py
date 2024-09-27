@@ -1,4 +1,3 @@
-
 from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -107,12 +106,11 @@ def create_qa_chain(ensemble_retriever):
         {question} 
         #Context: 
         {context} 
-
+        #Previous Chat History:
+        {chat_history} 
         #Answer:"""
     )
-
-
-    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.0, streaming=True) # , max_tokens = 150)
+    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.0, streaming=True)# , max_tokens = 150)
     multiquery_retriever = MultiQueryRetriever.from_llm(  # 
         retriever=ensemble_retriever,
         llm=llm,
@@ -121,7 +119,7 @@ def create_qa_chain(ensemble_retriever):
     print("LLM created.")
     """Create a QA chain using the retriever."""
     rag_chain = (
-        {"context": multiquery_retriever, "question": RunnablePassthrough()}
+        {"context": multiquery_retriever, "question": RunnablePassthrough(), "chat_history": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
@@ -131,7 +129,7 @@ def create_qa_chain(ensemble_retriever):
 def my_retriever(file_path):
     ssl._create_default_https_context = ssl._create_unverified_context     
     load_dotenv() # api key 정보 로드
-    
+
     # RAG를 위한 vectorDB와 qa chain 을 로드함. 
     documents = load_md_files(file_path)
     splitted_docs = split_docs(documents)
@@ -139,10 +137,8 @@ def my_retriever(file_path):
     faiss_retriever, faiss_db = create_FAISS_retriever(splitted_docs)
     ensemble_retriever = create_ensemble_retriever([bm25_retriever, faiss_retriever])
     rag_chain = create_qa_chain(ensemble_retriever)
-    
     return rag_chain, faiss_db
 
- 
 # ==== test ======
 """if __name__ == "__main__":
     rag_chain = my_retriever('data/ktb_data_09.md')   

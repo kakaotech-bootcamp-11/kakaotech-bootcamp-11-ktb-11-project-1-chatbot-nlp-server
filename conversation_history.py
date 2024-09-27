@@ -50,7 +50,7 @@ def save_conversation(collection, user_id, chat_id, role, text):
     collection.insert_one(conversation)
     
 
-def history(collection, user_id, chat_id, limit=2): # 대화 기록 조회
+def history(collection, user_id, chat_id, limit=4): # 대화 기록 조회
     
     # 대화 기록 불러오기
     query = {
@@ -67,7 +67,7 @@ def history(collection, user_id, chat_id, limit=2): # 대화 기록 조회
 if __name__ == "__main__":
     # 대화 저장
     save_conversation("user123", "thread456", "user", "안녕하세요, 오늘 날씨는 어떤가요?")
-    save_conversation("user123", "thread456", "system", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
+    save_conversation("user123", "thread456", "assistant", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
 
     # 최근 대화 5개 가져오기
     recent_conversations = history("user123", "thread456", limit=5)
