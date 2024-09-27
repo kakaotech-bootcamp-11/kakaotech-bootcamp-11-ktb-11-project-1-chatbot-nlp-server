@@ -48,7 +48,7 @@ def history(user_id, thread_id, limit=5):
 
 # 예시 사용
 save_conversation("user123", "thread456", "user", "안녕하세요, 오늘 날씨는 어떤가요?")
-save_conversation("user123", "thread456", "assistant", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
+save_conversation("user123", "thread456", "system", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
 
 # 최근 대화 5개 가져오기
 recent_conversations = history("user123", "thread456", limit=5)
