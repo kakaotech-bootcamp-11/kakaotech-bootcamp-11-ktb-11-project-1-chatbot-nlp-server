@@ -1,0 +1,401 @@
+Index: app.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import openai\nimport json\nimport logging\nimport warnings\nimport os\nfrom flask import Flask, request, jsonify, Response, abort\nfrom flask_cors import CORS\nfrom dotenv import load_dotenv\nfrom pdf_retriever import pdf_retriever\nfrom get_weather import get_weather_info\nfrom find_routes_v2 import get_route_description\nfrom error_handler import register_error_handlers\nfrom openai import OpenAIError\n\n\nfrom werkzeug.exceptions import BadRequest\n\n# 플라스크 앱 정의\napp = Flask(__name__)\nCORS(app)\nregister_error_handlers(app) # flask error handler 등록 \n\n# 모든 경고를 무시\nwarnings.filterwarnings(\"ignore\")\n\n# 로깅 설정\nlogging.basicConfig(\n    filename='./logging/error_log.log',\n    level=logging.INFO,\n    format='%(asctime)s - %(levelname)s - %(message)s',\n    datefmt='%Y-%m-%d %H:%M:%S'\n)\n\n\n# API 키 로드하기\nprint(\"환경변수 로드 \")\nload_dotenv() # # .env 파일에서 환경 변수를 로드합니다\nOPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY\") # API 키 설정\nTMAP_API_KEY = os.environ.get(\"TMAP_API_KEY\")\nKAKAO_MAP_API_KEY = os.environ.get(\"KAKAO_MAP_API_KEY1\")\nWEATHER_API_KEY = os.environ.get(\"WEATHER_API_KEY\")\n\n# LLM 변수 정의 \nSTREAM_TOKEN_SIZE = 30\nMODEL_VERSION = \"gpt-4o\" # \"gpt-3.5-turbo\"  \nMAX_TOKENS_OUTPUT = 500\n\n\ndef split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 \n    # 텍스트를 공백을 기준으로 토큰화\n    words = text.split()\n    for i in range(0, len(words), max_tokens):\n        yield ' '.join(words[i:i+max_tokens])\n\ndef stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. \n    for chunk in split_text_into_tokens(text, max_tokens):\n        yield chunk  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.\n\n\ndef stream_chatgpt(system_prompt, user_prompt):\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt + \"\\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요.\"},\n                {\"role\": \"user\", \"content\": user_prompt}\n            ],\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 \n            n = 1,         # 생성 답변 개수,\n            stream=True\n        )\n        def event_stream(): #stream generator\n            result_txt = ''\n            for chunk in response:\n                text = chunk.choices[0].delta.content\n                #print(\"chunk.choices[0]\", chunk.choices[0])\n                #print(\"text:\", text, \"\\n\")\n                if text is None: # None type 일 경우 pass \n                    continue\n                result_txt += str(text)\n\n                yield text\n            print(result_txt)\n            \n        return Response(event_stream(), mimetype='text/event-stream')\n    except OpenAIError as e:\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        raise e # OpenAIError\n    except Exception as e:\n        logging.error(f\"Error: {str(e)}\")\n        raise e # OpenAIError\n    \ndef text_chatgpt(system_prompt, user_prompt): # text 형식으로 리턴\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt + \"\\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요.\"},\n                {\"role\": \"user\", \"content\": user_prompt}\n            ],\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 \n            n = 1,         # 생성 답변 개수,\n            stream=False\n        )\n        return response.choices[0].message.content\n    except OpenAIError as e:\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        raise e # OpenAIError\n    except Exception as e:\n        logging.error(f\"Error: {str(e)}\")\n        raise e # OpenAIError\n    \n\ndef topic_classification(user_input):\n    system_prompt = \"\"\"\n            You are a classifier. Your task is to analyze '{user_input}'.\n        - If '{user_input}' is a question about the asking weather, return 'WEATHER'.\n        - If '{user_input}' is a question about public transportation routes involving a specific origin and destination, return 'TRANS'.\n        - If '{user_input}' does not match either of the above cases, return 'ELSE'.\n        \"\"\"\n    return text_chatgpt(system_prompt, user_input)\n\ndef extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출력  \n    system_prompt = \"\"\"\n            Your task is to identify the departure and destination from the user's input. \n            Follow these guidelines: \n            1. If either the departure or destination is ambiguous or unclear, mark it as unknown. \n            2. If the input refers to the user's current location, mark it as current.\n            3. If the input suggests the user's home location, mark it as home. \n            4. Please return a dictionary formatted like this : {\"from\":departure, \"to\":destination}\n            \"\"\"\n    return text_chatgpt(system_prompt =system_prompt, user_prompt= user_input )\n\ndef handle_weather_topic(user_input):\n    weather_info = get_weather_info()\n    system_prompt = (f\"You are a helpful assistant, and you will kindly answer questions about current weather. \"\n              f\"한국어로 대답해야해. 현재 날씨 정보는 다음과 같아. {weather_info}, \"\n              \"이 날씨 정보를 다 출력할 필요는 없고, 주어진 질문인 '{user_input}'에 필요한 답만 해줘 \")\n    result = stream_chatgpt(system_prompt, user_input)\n    return result\n    \"\"\"if result is not None: return result # 비동기식 response 형식 \n    else:\n        result = \"죄송해요. 챗 지피티가 답변을 가져오지 못했어요.\"\n        return Response(stream_message(result), content_type='text/plain')\"\"\"\n\ndef handle_trans_topic(user_input):\n    dict_string = extract_arrv_dest(user_input)\n    from_to_dict = json.loads(dict_string)\n    result_txt = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)\n    system_prompt = f\"너는 출발지에서 목적지까지 경로를 안내하는 역할이고, 한국어로 대답해야해.\"\\\n              f\"사용자는 경로에 대해 요약된 텍스트를 줄거야. 너는 그걸 자연스럽게 만들어주면 돼. \"\\\n              f\"출발지는 ```{from_to_dict['from']}```이고 목적지는 ```{from_to_dict['to']}```임.  \"\n    user_prompt = f\"다음을 자연스럽게 다시 말해줘:\\n```{result_txt}``` \"\n    return stream_chatgpt(user_prompt) \n    \"\"\"if dict_string:\n        from_to_dict = json.loads(dict_string)\n        result = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)\n    else:\n        result = \"죄송해요. 다시 한 번 질문해주세요.\" #error msg\n        logging.error(\"extract_arrv_dest is None\")\n\n    return Response(stream_message(result), content_type='text/plain')\"\"\"\n\ndef handle_else_topic(user_input):\n    system_prompt = (\"You are a helpful assistant.\"\n              \"사용자들은 한국어로 질문할 거고, 너도 한국어로 대답해야돼\")\n    result = stream_chatgpt(system_prompt, user_input)\n    return result\n    \"\"\"if result is not None: \n        return result # 비동기식 response 형식 \n    else:\n        result = \"죄송해요. 챗 지피티가 답변을 가져오지 못했어요.\"\n        return Response(stream_message(result), content_type='text/plain')\"\"\"\n\ndef validate_request_data():\n    params = request.get_json()\n    if not params:  # JSON 데이터가 없는 경우\n        raise BadRequest(\"No request body\")\n    elif 'content' not in params or not params['content'].strip():  # 'content' 필드가 없거나 값이 비어 있는 경우\n        raise BadRequest(\"No content field in request body or value for content is empty\")\n    return params\n\n@app.route(\"/conv\", methods=['POST'])\ndef llm():\n    params = validate_request_data()  # 공통 함수 호출\n    user_input = params['content']\n\n    # 동기식으로 RAG 기법 적용한 QA 체인 생성\n    response = retriever(user_input)\n    print('RAG response:', response)\n    if response['result'] and not any(phrase in response['result'] for phrase in [\"죄송\", \"모르겠습니다\", \"알 수 없습니다\", \"확인할 수 없습니다\", \"없습니다.\"])  : # 만약 \n        logging.info( f\"RAG - user input: {user_input}\")\n        print(\"logging: RAG 답변 \")\n        return Response(stream_message(response['result']), content_type='text/plain')\n    \n    elif not response['result']: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 \n        logging.error(\"error\" \"RAG를 요청 했으나 결과가 없음. 400\")\n        raise BadRequest(\"No response from RAG\") # 추후 수정\n\n\n    # 날씨, 교통, 그외 주제인지 분류하기 \n    topic = topic_classification(user_input)\n    print(\"topic:\", topic)\n    if topic == \"WEATHER\":\n        return handle_weather_topic(user_input)\n    elif topic == \"TRANS\":\n        return handle_trans_topic(user_input)\n    elif topic == \"ELSE\":\n        return handle_else_topic(user_input)\n    \"\"\"else:\n        logging.error(\"chat gpt failed to classify: result is None\")\n        return jsonify({\"error\": \"Topic classification failed\"}), 500\"\"\"\n\n\n@app.route(\"/test\", methods=['POST'])\ndef test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달 \n    params = validate_request_data()\n    user_input = params['content'] \n    system_prompt = \"\"\"사용자의 질문에 친절하게 대답해줘.\"\"\"\n    result = text_chatgpt(system_prompt, user_input)\n    print(\"result:\", result)\n    return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'\n\n@app.route(\"/test/stream\", methods=['POST'])\ndef stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴. \n    params = validate_request_data()\n    # 답변 가져오기 \n    user_input = params['content'] \n    system_prompt = \"You are a helpful assistant\"\n    result = stream_chatgpt(system_prompt, user_input) # \n    return result \n\n# test function for error handling\n@app.route(\"/error_handling\", methods=['POST'])\ndef error_handle(): # 대화의 타이틀 생성 #(params)\n    params = request.get_json()\n    if not params : # json = {}\n        raise BadRequest(\"No request body\")\n    elif 'content' not in params or not params['content'].strip(): # json = {'msg': \"...\"} or json = {'content': \"\"}\n        raise BadRequest(\"No content field in request body or value for content is empty\")\n        #abort(500, description=\"No request body ---- \")\n    return jsonify({\"result\": f\"no error:{params['content']}\"})\n\n\nif __name__ == '__main__':\n    print(\"app.run 시작\")\n    print(\"PDF 검색기 로드 시작\")\n    pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 \n    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)\n    try:\n        retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)\n    except OpenAIError as e:\n        raise e\n    print(\"PDF 검색기 로드 끝\")\n    \n    app.run(port=5001,debug=True)\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app.py b/app.py
+--- a/app.py	(revision 23e08358525fa93ba5de43580560dcb2431ed7e1)
++++ b/app.py	(date 1727342497646)
+@@ -1,28 +1,23 @@
+-import openai
+-import json
+ import logging
+-import warnings
+ import os
+-from flask import Flask, request, jsonify, Response, abort
++from flask import Flask, jsonify, Response, stream_with_context
+ from flask_cors import CORS
+-from dotenv import load_dotenv
+-from pdf_retriever import pdf_retriever
+-from get_weather import get_weather_info
+-from find_routes_v2 import get_route_description
++from document_retriever import my_retriever
+ from error_handler import register_error_handlers
+ from openai import OpenAIError
+-
+-
+ from werkzeug.exceptions import BadRequest
++from conversation_history import save_conversation, history
++from pymongo import MongoClient
++from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, \
++    text_chatgpt
++from mongo_client import get_mongo_client
++import json, time
+ 
+ # 플라스크 앱 정의
+ app = Flask(__name__)
+ CORS(app)
+-register_error_handlers(app) # flask error handler 등록 
++register_error_handlers(app)  # flask error handler 등록
+ 
+-# 모든 경고를 무시
+-warnings.filterwarnings("ignore")
+-
+ # 로깅 설정
+ logging.basicConfig(
+     filename='./logging/error_log.log',
+@@ -31,230 +26,124 @@
+     datefmt='%Y-%m-%d %H:%M:%S'
+ )
+ 
++# 환경 변수에서 MongoDB 연결 URL 가져오기
++# mongo_uri = os.getenv('MONGO_URI')
++client, db, collection = get_mongo_client()
+ 
+-# API 키 로드하기
+-print("환경변수 로드 ")
+-load_dotenv() # # .env 파일에서 환경 변수를 로드합니다
+-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") # API 키 설정
+-TMAP_API_KEY = os.environ.get("TMAP_API_KEY")
+-KAKAO_MAP_API_KEY = os.environ.get("KAKAO_MAP_API_KEY1")
+-WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
++# 환경 변수에서 API 키와 PDF 경로를 로드
++OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
++TMAP_API_KEY = os.getenv('TMAP_API_KEY')
++KAKAO_MAP_API_KEY = os.getenv('KAKAO_MAP_API_KEY1')
++WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
++LOCATION1 = os.getenv('LOCATION1')
+ 
+-# LLM 변수 정의 
+-STREAM_TOKEN_SIZE = 30
+-MODEL_VERSION = "gpt-4o" # "gpt-3.5-turbo"  
++# LLM 변수 정의
++STREAM_TOKEN_SIZE = 1  # 스트림 토큰 단위 default 125
++MODEL_VERSION = "gpt-4o-mini"  # "gpt-3.5-turbo"
+ MAX_TOKENS_OUTPUT = 500
+ 
+-
+-def split_text_into_tokens(text, max_tokens=STREAM_TOKEN_SIZE): # max_tokens : 스트림 1번에 보낼  토큰 단위를 지정 
+-    # 텍스트를 공백을 기준으로 토큰화
+-    words = text.split()
+-    for i in range(0, len(words), max_tokens):
+-        yield ' '.join(words[i:i+max_tokens])
+-
+-def stream_message(text, max_tokens=STREAM_TOKEN_SIZE, delay=1): # 데이터가 청크 단위로 스트리밍 된다. 
+-    for chunk in split_text_into_tokens(text, max_tokens):
+-        yield chunk  # 이 부분을 메시지 전송 로직으로 대체할 수 있습니다.
+-
+-
+-def stream_chatgpt(system_prompt, user_prompt):
+-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+-    try:
+-        response = client.chat.completions.create(
+-            model=MODEL_VERSION,
+-            messages=[
+-                {"role": "system", "content": system_prompt + "\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요."},
+-                {"role": "user", "content": user_prompt}
+-            ],
+-            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답
+-            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 
+-            n = 1,         # 생성 답변 개수,
+-            stream=True
+-        )
+-        def event_stream(): #stream generator
+-            result_txt = ''
+-            for chunk in response:
+-                text = chunk.choices[0].delta.content
+-                #print("chunk.choices[0]", chunk.choices[0])
+-                #print("text:", text, "\n")
+-                if text is None: # None type 일 경우 pass 
+-                    continue
+-                result_txt += str(text)
+-
+-                yield text
+-            print(result_txt)
+-            
+-        return Response(event_stream(), mimetype='text/event-stream')
+-    except OpenAIError as e:
+-        logging.error(f"Error while calling chatGPT API function call: {str(e)}")
+-        raise e # OpenAIError
+-    except Exception as e:
+-        logging.error(f"Error: {str(e)}")
+-        raise e # OpenAIError
+-    
+-def text_chatgpt(system_prompt, user_prompt): # text 형식으로 리턴
+-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+-    try:
+-        response = client.chat.completions.create(
+-            model=MODEL_VERSION,
+-            messages=[
+-                {"role": "system", "content": system_prompt + "\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요."},
+-                {"role": "user", "content": user_prompt}
+-            ],
+-            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답
+-            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 
+-            n = 1,         # 생성 답변 개수,
+-            stream=False
+-        )
+-        return response.choices[0].message.content
+-    except OpenAIError as e:
+-        logging.error(f"Error while calling chatGPT API function call: {str(e)}")
+-        raise e # OpenAIError
+-    except Exception as e:
+-        logging.error(f"Error: {str(e)}")
+-        raise e # OpenAIError
+-    
++# 검색할 문서 로드
++file_path = os.getenv('PDF_PATH', 'data/ktb_data_09.md')
++try:
++    retriever, faiss_db = my_retriever(file_path)
++except OpenAIError as e:
++    raise e
++print("=======검색기 로드 끝========")
+ 
+-def topic_classification(user_input):
+-    system_prompt = """
+-            You are a classifier. Your task is to analyze '{user_input}'.
+-        - If '{user_input}' is a question about the asking weather, return 'WEATHER'.
+-        - If '{user_input}' is a question about public transportation routes involving a specific origin and destination, return 'TRANS'.
+-        - If '{user_input}' does not match either of the above cases, return 'ELSE'.
+-        """
+-    return text_chatgpt(system_prompt, user_input)
+ 
+-def extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출력  
+-    system_prompt = """
+-            Your task is to identify the departure and destination from the user's input. 
+-            Follow these guidelines: 
+-            1. If either the departure or destination is ambiguous or unclear, mark it as unknown. 
+-            2. If the input refers to the user's current location, mark it as current.
+-            3. If the input suggests the user's home location, mark it as home. 
+-            4. Please return a dictionary formatted like this : {"from":departure, "to":destination}
+-            """
+-    return text_chatgpt(system_prompt =system_prompt, user_prompt= user_input )
++# 모델의 응답을 스트리밍하기 위한 제너레이터 함수
++def generate_response_stream(user_id, chat_id, user_input):
++    my_history = history(collection, user_id, chat_id, limit=4)  # 최근 것부터 불러움?
++    # Construct the context for the LLM by passing the history along with the prompt
++    context = []
++    context.append({"role": 'user', "content": user_input})
++    for h in reversed(my_history):
++        context.append({"role": h["role"], "content": h["text"]})
+ 
+-def handle_weather_topic(user_input):
+-    weather_info = get_weather_info()
+-    system_prompt = (f"You are a helpful assistant, and you will kindly answer questions about current weather. "
+-              f"한국어로 대답해야해. 현재 날씨 정보는 다음과 같아. {weather_info}, "
+-              "이 날씨 정보를 다 출력할 필요는 없고, 주어진 질문인 '{user_input}'에 필요한 답만 해줘 ")
+-    result = stream_chatgpt(system_prompt, user_input)
+-    return result
+-    """if result is not None: return result # 비동기식 response 형식 
+-    else:
+-        result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
+-        return Response(stream_message(result), content_type='text/plain')"""
++    print("===" * 10)
++    for ele in context:
++        print(ele)
++    print("===" * 10)
+ 
+-def handle_trans_topic(user_input):
+-    dict_string = extract_arrv_dest(user_input)
+-    from_to_dict = json.loads(dict_string)
+-    result_txt = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)
+-    system_prompt = f"너는 출발지에서 목적지까지 경로를 안내하는 역할이고, 한국어로 대답해야해."\
+-              f"사용자는 경로에 대해 요약된 텍스트를 줄거야. 너는 그걸 자연스럽게 만들어주면 돼. "\
+-              f"출발지는 ```{from_to_dict['from']}```이고 목적지는 ```{from_to_dict['to']}```임.  "
+-    user_prompt = f"다음을 자연스럽게 다시 말해줘:\n```{result_txt}``` "
+-    return stream_chatgpt(user_prompt) 
+-    """if dict_string:
+-        from_to_dict = json.loads(dict_string)
+-        result = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)
+-    else:
+-        result = "죄송해요. 다시 한 번 질문해주세요." #error msg
+-        logging.error("extract_arrv_dest is None")
++    print("원래 사용자 인풋:\n", user_input, "=" * 10)
++    print("히스토리 프롬프트:\n", context, "=" * 10)
+ 
+-    return Response(stream_message(result), content_type='text/plain')"""
++    # input_txt = user_input + history_prompt
++    # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)
++    save_conversation(collection, user_id, chat_id, "user", user_input)  # 사용자 질문
++    answer_text = ''
++    for chunk in retriever.stream(context):  # stream을 사용하여 스트리밍 처리
++        print("chunk:", chunk)
++        answer_text += chunk
++        chunk_json = json.dumps({"text": chunk}, ensure_ascii=False)
++        yield f"data: {chunk_json}\n\n"  # "data": ... \n\n 을
++        # print(chunk)
++    # 질문 & 응답 저장
+ 
+-def handle_else_topic(user_input):
+-    system_prompt = ("You are a helpful assistant."
+-              "사용자들은 한국어로 질문할 거고, 너도 한국어로 대답해야돼")
+-    result = stream_chatgpt(system_prompt, user_input)
+-    return result
+-    """if result is not None: 
+-        return result # 비동기식 response 형식 
+-    else:
+-        result = "죄송해요. 챗 지피티가 답변을 가져오지 못했어요."
+-        return Response(stream_message(result), content_type='text/plain')"""
++    # time.sleep(0.1)
++    save_conversation(collection, user_id, chat_id, "system", answer_text)  # 답변
++    print("최종 답변:", answer_text)
+ 
+-def validate_request_data():
+-    params = request.get_json()
+-    if not params:  # JSON 데이터가 없는 경우
+-        raise BadRequest("No request body")
+-    elif 'content' not in params or not params['content'].strip():  # 'content' 필드가 없거나 값이 비어 있는 경우
+-        raise BadRequest("No content field in request body or value for content is empty")
+-    return params
+ 
+-@app.route("/conv", methods=['POST'])
++@app.route("/nlp-api/conv", methods=['POST'])
+ def llm():
+-    params = validate_request_data()  # 공통 함수 호출
++    params = get_request_data()  # request body 를 가져옴
++    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
++    print("user_input, user_id, chat_id:", user_input, user_id, chat_id)
++
++    # save_conversation(collection, user_id, chat_id, "user", user_input)
++
++    response_generator = generate_response_stream(user_id, chat_id, user_input)
++    return Response(stream_with_context(response_generator), mimetype='text/event-stream', )
++    # return Response(stream_message(response_generator), mimetype='application/json')
++
++
++@app.route("/nlp-api/title", methods=['POST'])
++def make_title():  # 대화의 타이틀 생성
++    params = get_request_data(title=True)
+     user_input = params['content']
++    system_prompt = """넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘."""
++    title = text_chatgpt(system_prompt, user_input)
+ 
+-    # 동기식으로 RAG 기법 적용한 QA 체인 생성
+-    response = retriever(user_input)
+-    print('RAG response:', response)
+-    if response['result'] and not any(phrase in response['result'] for phrase in ["죄송", "모르겠습니다", "알 수 없습니다", "확인할 수 없습니다", "없습니다."])  : # 만약 
+-        logging.info( f"RAG - user input: {user_input}")
+-        print("logging: RAG 답변 ")
+-        return Response(stream_message(response['result']), content_type='text/plain')
+-    
+-    elif not response['result']: #  # RAG를 수행하지 못했을 때 - 예외 처리 추가하기 
+-        logging.error("error" "RAG를 요청 했으나 결과가 없음. 400")
+-        raise BadRequest("No response from RAG") # 추후 수정
++    if title is None:
++        return jsonify({"error": "죄송해요. 챗 지피티가 제목을 제대로 가져오지 못했어요."})
++    title = title.strip('"')  # 앞뒤의 큰 따옴표 제거
++    return jsonify({"title": title})
+ 
+ 
+-    # 날씨, 교통, 그외 주제인지 분류하기 
+-    topic = topic_classification(user_input)
+-    print("topic:", topic)
+-    if topic == "WEATHER":
+-        return handle_weather_topic(user_input)
+-    elif topic == "TRANS":
+-        return handle_trans_topic(user_input)
+-    elif topic == "ELSE":
+-        return handle_else_topic(user_input)
+-    """else:
+-        logging.error("chat gpt failed to classify: result is None")
+-        return jsonify({"error": "Topic classification failed"}), 500"""
+-
+-
+-@app.route("/test", methods=['POST'])
+-def test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달 
+-    params = validate_request_data()
+-    user_input = params['content'] 
++@app.route("/nlp-api/test", methods=['POST'])
++def test():  # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달
++    params = get_request_data()  # request body 를 가져옴
++    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
+     system_prompt = """사용자의 질문에 친절하게 대답해줘."""
+     result = text_chatgpt(system_prompt, user_input)
+-    print("result:", result)
+-    return Response(stream_message(result), mimetype='text/event-stream') # 'text/plain'
++    print("result(whole text):", result)
++    response_generator = generate_response_stream(user_id, chat_id, user_input)
++    return Response(response_generator, mimetype='text/event-stream')
+ 
+-@app.route("/test/stream", methods=['POST'])
+-def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴. 
+-    params = validate_request_data()
+-    # 답변 가져오기 
+-    user_input = params['content'] 
+-    system_prompt = "You are a helpful assistant"
+-    result = stream_chatgpt(system_prompt, user_input) # 
+-    return result 
++
++@app.route("/nlp-api/test/stream", methods=['POST'])
++def stream_output():  # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴.
++    # user_input, user_id, chat_id = get_request_data()  # 공통
++    params = get_request_data()  # request body 를 가져옴
++    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']
++
++    # 답변 가져오기
++    response_generator = generate_response_stream(user_id, chat_id, user_input)
++    return Response(response_generator, mimetype='text/event-stream')
++
+ 
+ # test function for error handling
+-@app.route("/error_handling", methods=['POST'])
+-def error_handle(): # 대화의 타이틀 생성 #(params)
+-    params = request.get_json()
+-    if not params : # json = {}
++@app.route("/nlp-api/error_handling", methods=['POST'])
++def error_handle():  # 대화의 타이틀 생성 #(params)
++    params = get_request_data()  # request body 를 가져옴
++    if not params:  # json = {}
+         raise BadRequest("No request body")
+-    elif 'content' not in params or not params['content'].strip(): # json = {'msg': "..."} or json = {'content': ""}
++    elif 'content' not in params or not params['content'].strip():  # json = {'msg': "..."} or json = {'content': ""}
+         raise BadRequest("No content field in request body or value for content is empty")
+-        #abort(500, description="No request body ---- ")
+     return jsonify({"result": f"no error:{params['content']}"})
+ 
+ 
+ if __name__ == '__main__':
+-    print("app.run 시작")
+-    print("PDF 검색기 로드 시작")
+-    pdf_path = './data/ktb_data_07_3.pdf'  # PDF 경로를 지정해주기 - 추후에 모든 pdf 읽도록  바꾸도록 지정하기 
+-    retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+-    try:
+-        retriever = pdf_retriever(pdf_path, MODEL_VERSION, OPENAI_API_KEY)
+-    except OpenAIError as e:
+-        raise e
+-    print("PDF 검색기 로드 끝")
+-    
+-    app.run(port=5001,debug=True)
++    print("app starts running")
++    app.run(port=5001, debug=True)
+Index: etc/error_handler_test/chatgpt_api.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import openai\nimport json\nimport logging\nimport warnings\nimport os\nfrom flask import Flask, request, jsonify, Response, abort\nfrom dotenv import load_dotenv\nfrom openai import OpenAIError\n\n\n# 로깅 설정\nlogging.basicConfig(\n    filename='./logging/error_log.log',\n    level=logging.INFO,\n    format='%(asctime)s - %(levelname)s - %(message)s',\n    datefmt='%Y-%m-%d %H:%M:%S'\n)\n\n\nload_dotenv() # # .env 파일에서 환경 변수를 로드합니다\nOPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY2\") # API 키 설정\nMAX_TOKENS_OUTPUT = 600\nMODEL_VERSION = \"gpt-4o\" # \"gpt-3.5-turbo\"  \n\ndef stream_chatgpt(system_prompt, user_prompt):\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt},\n                {\"role\": \"user\", \"content\": user_prompt}\n            ],\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 \n            n = 1,         # 생성 답변 개수,\n            stream=True\n        )\n        def event_stream(): #stream generator\n            print(\"response\", response)\n            for chunk in response:\n                text = chunk.choices[0].delta.get('content')\n                if len(text):\n                    yield text\n                    print(text)\n        return Response(event_stream(), mimetype='text/event-stream')\n    except Exception as e:\n        print(f\"Error while calling chatGPT API function call: {str(e)}\")\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        abort(500)\n        # return None\n    \n# 동기식 chatGPT 함수\ndef cls_chatgpt(system_prompt, user_prompt):\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt},\n                {\"role\": \"user\", \"content\": user_prompt}\n            ],\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수 \n            n = 1,         # 생성 답변 개수,\n            stream=True\n        )\n        return response.choices[0].message.content\n    except Exception as e:\n        print(f\"Error while calling chatGPT API function call: {str(e)}\")\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        raise e # OpenAIError\n    \n\n\"\"\"def test():\n    system_prompt = \"you are a helpful assistant \"\n    user_prompt = \"한국 전래 동화 3개만 알려줘\"\n    stream_chatgpt(system_prompt, user_prompt)\n\ntest()\n\"\"\"\n    \n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/etc/error_handler_test/chatgpt_api.py b/etc/error_handler_test/chatgpt_api.py
+--- a/etc/error_handler_test/chatgpt_api.py	(revision 23e08358525fa93ba5de43580560dcb2431ed7e1)
++++ b/etc/error_handler_test/chatgpt_api.py	(date 1727342488072)
+@@ -45,9 +45,8 @@
+                     print(text)
+         return Response(event_stream(), mimetype='text/event-stream')
+     except Exception as e:
+-        print(f"Error while calling chatGPT API function call: {str(e)}")
+         logging.error(f"Error while calling chatGPT API function call: {str(e)}")
+-        abort(500)
++        raise e # OpenAIError
+         # return None
+     
+ # 동기식 chatGPT 함수
+@@ -67,7 +66,6 @@
+         )
+         return response.choices[0].message.content
+     except Exception as e:
+-        print(f"Error while calling chatGPT API function call: {str(e)}")
+         logging.error(f"Error while calling chatGPT API function call: {str(e)}")
+         raise e # OpenAIError
+     

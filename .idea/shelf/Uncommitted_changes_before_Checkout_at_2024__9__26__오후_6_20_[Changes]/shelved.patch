@@ -1,0 +1,166 @@
+Index: app.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\nimport logging\nimport os\nfrom flask import Flask,  jsonify, Response, stream_with_context\nfrom flask_cors import CORS\nfrom document_retriever import my_retriever\nfrom error_handler import register_error_handlers\nfrom openai import OpenAIError\nfrom werkzeug.exceptions import BadRequest\nfrom conversation_history import save_conversation, history\nfrom pymongo import MongoClient\nfrom utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt\nfrom mongo_client import get_mongo_client\nimport json, time\n\n\n\n# 플라스크 앱 정의\napp = Flask(__name__)\nCORS(app)\nregister_error_handlers(app) # flask error handler 등록\n\n# 로깅 설정\nlogging.basicConfig(\n    filename='./logging/error_log.log',\n    level=logging.INFO,\n    format='%(asctime)s - %(levelname)s - %(message)s',\n    datefmt='%Y-%m-%d %H:%M:%S'\n)\n\n# 환경 변수에서 MongoDB 연결 URL 가져오기\n# mongo_uri = os.getenv('MONGO_URI')\nclient, db, collection = get_mongo_client()\n\n\n\n# 환경 변수에서 API 키와 PDF 경로를 로드\nOPENAI_API_KEY = os.getenv('OPENAI_API_KEY')\nTMAP_API_KEY = os.getenv('TMAP_API_KEY')\nKAKAO_MAP_API_KEY = os.getenv('KAKAO_MAP_API_KEY1')\nWEATHER_API_KEY = os.getenv('WEATHER_API_KEY')\nLOCATION1 = os.getenv('LOCATION1')\n\n# LLM 변수 정의\nSTREAM_TOKEN_SIZE = 1 # 스트림 토큰 단위 default 125\nMODEL_VERSION = \"gpt-4o-mini\" # \"gpt-3.5-turbo\"\nMAX_TOKENS_OUTPUT = 500\n\n# 검색할 문서 로드\nfile_path = os.getenv('PDF_PATH', 'data/ktb_data_09.md')\ntry:\n    retriever, faiss_db = my_retriever(file_path)\nexcept OpenAIError as e:\n    raise e\nprint(\"=======검색기 로드 끝========\")\n\n# 모델의 응답을 스트리밍하기 위한 제너레이터 함수\ndef generate_response_stream(user_id, chat_id, user_input):\n    my_history = history(collection, user_id, chat_id, limit=4) # 최근 것부터 불러움?\n    # Construct the context for the LLM by passing the history along with the prompt\n    context = []\n    context.append({\"role\": 'user', \"content\": user_input})\n    for h in reversed(my_history):\n        context.append({\"role\": h[\"role\"], \"content\": h[\"text\"]})\n    \n    print(\"===\"*10)\n    for ele in context:\n        print(ele)\n    print(\"===\"*10)\n\n    print(\"원래 사용자 인풋:\\n\", user_input, \"=\"*10)\n    print(\"히스토리 프롬프트:\\n\", context, \"=\"*10)\n\n    #input_txt = user_input + history_prompt\n    # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)\n    save_conversation(collection, user_id, chat_id, \"user\", user_input) #사용자 질문\n    answer_text = ''\n    for chunk in retriever.stream(context):  # stream을 사용하여 스트리밍 처리\n        print(\"chunk:\", chunk)\n        answer_text += chunk\n        chunk_json = json.dumps({\"text\": chunk}, ensure_ascii=False)\n        yield f\"data: {chunk_json}\\n\\n\" # \"data\": ... \\n\\n 을 \n        # print(chunk)\n    # 질문 & 응답 저장 \n    \n    #time.sleep(0.1)\n    save_conversation(collection, user_id, chat_id, \"system\", answer_text) # 답변 \n    print(\"최종 답변:\", answer_text)\n\n@app.route(\"/nlp-api/conv\", methods=['POST'])\ndef llm():\n    params = get_request_data() # request body 를 가져옴\n    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']\n    print(\"user_input, user_id, chat_id:\", user_input, user_id, chat_id)\n\n    #save_conversation(collection, user_id, chat_id, \"user\", user_input)\n\n    response_generator = generate_response_stream(user_id, chat_id, user_input)\n    return Response(stream_with_context(response_generator), mimetype='text/event-stream', )\n    #return Response(stream_message(response_generator), mimetype='application/json')\n\n@app.route(\"/nlp-api/title\", methods=['POST'])\ndef make_title(): # 대화의 타이틀 생성\n    params = get_request_data(title=True)\n    user_input = params['content']\n    system_prompt = \"\"\"넌 대화 타이틀을 만드는 역할이야. 챗봇에서 사용자의 첫 번째 메시지를 기반으로 해당 대화의 제목을 요약해줘.\"\"\"\n    title = text_chatgpt(system_prompt, user_input)\n\n    if title is None:\n        return jsonify({\"error\": \"죄송해요. 챗 지피티가 제목을 제대로 가져오지 못했어요.\"})\n    title = title.strip('\"') # 앞뒤의 큰 따옴표 제거\n    return jsonify({\"title\": title})\n\n@app.route(\"/nlp-api/test\", methods=['POST'])\ndef test(): # whole text 만든 다음, 청크 단위로 나눠 스트림 형식으로 전달\n    params = get_request_data() # request body 를 가져옴\n    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']\n    system_prompt = \"\"\"사용자의 질문에 친절하게 대답해줘.\"\"\"\n    result = text_chatgpt(system_prompt, user_input)\n    print(\"result(whole text):\", result)\n    response_generator = generate_response_stream(user_id, chat_id, user_input)\n    return Response(response_generator, mimetype='text/event-stream')\n\n@app.route(\"/nlp-api/test/stream\", methods=['POST'])\ndef stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴.\n    #user_input, user_id, chat_id = get_request_data()  # 공통\n    params = get_request_data() # request body 를 가져옴\n    user_input, user_id, chat_id = params['content'], params['user_id'], params['chat_id']\n\n    # 답변 가져오기\n    response_generator = generate_response_stream(user_id, chat_id, user_input)\n    return Response(response_generator, mimetype='text/event-stream')\n\n# test function for error handling\n@app.route(\"/nlp-api/error_handling\", methods=['POST'])\ndef error_handle(): # 대화의 타이틀 생성 #(params)\n    params = get_request_data() # request body 를 가져옴\n    if not params : # json = {}\n        raise BadRequest(\"No request body\")\n    elif 'content' not in params or not params['content'].strip(): # json = {'msg': \"...\"} or json = {'content': \"\"}\n        raise BadRequest(\"No content field in request body or value for content is empty\")\n    return jsonify({\"result\": f\"no error:{params['content']}\"})\n\n\n\nif __name__ == '__main__':\n    print(\"app starts running\")\n    app.run(port=5001,debug=True)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app.py b/app.py
+--- a/app.py	
++++ b/app.py	
+@@ -11,7 +11,7 @@
+ from pymongo import MongoClient
+ from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
+ from mongo_client import get_mongo_client
+-import json, time
++import json
+ 
+ 
+ 
+@@ -56,35 +56,36 @@
+ 
+ # 모델의 응답을 스트리밍하기 위한 제너레이터 함수
+ def generate_response_stream(user_id, chat_id, user_input):
+-    my_history = history(collection, user_id, chat_id, limit=4) # 최근 것부터 불러움?
+-    # Construct the context for the LLM by passing the history along with the prompt
+-    context = []
+-    context.append({"role": 'user', "content": user_input})
+-    for h in reversed(my_history):
+-        context.append({"role": h["role"], "content": h["text"]})
+-    
+-    print("==="*10)
+-    for ele in context:
+-        print(ele)
+-    print("==="*10)
++    my_history = history(collection, user_id, chat_id, limit=4)
++
++    history_prompt = ""
++    if len(my_history) >  0: # 기존 대화 내역이 있음. 
+ 
++        #history_prompt = "이 질문에 답변하는데, 다음의 기존 대화 내역과 연관이 있으면, 다음의 기존 대화 내역을 참고해줘. 기존 대화 내역: \n```"
++
++        history_prompt = """
++                        When answering this question, refer to the existing conversation history below if needed.\n",
++                        "If the conversation history is not relevant or helpful for this question, proceed without referencing it.\n",
++                        "existing conversation history: ```
++                        """
++        for h in my_history:
++            history_prompt +=  h['role']+":"+h['text']+"\n"
++        history_prompt += '```'
+     print("원래 사용자 인풋:\n", user_input, "="*10)
+-    print("히스토리 프롬프트:\n", context, "="*10)
++    print("히스토리 프롬프트:\n", history_prompt, "="*10)
+ 
+-    #input_txt = user_input + history_prompt
++    input_txt = user_input + history_prompt
+     # retriever의 스트리밍 응답을 처리 (pipeline.stream 사용)
+-    save_conversation(collection, user_id, chat_id, "user", user_input) #사용자 질문
+     answer_text = ''
+-    for chunk in retriever.stream(context):  # stream을 사용하여 스트리밍 처리
++    for chunk in retriever.stream(input_txt):  # stream을 사용하여 스트리밍 처리
+         print("chunk:", chunk)
+         answer_text += chunk
+         chunk_json = json.dumps({"text": chunk}, ensure_ascii=False)
+         yield f"data: {chunk_json}\n\n" # "data": ... \n\n 을 
+         # print(chunk)
+     # 질문 & 응답 저장 
+-    
+-    #time.sleep(0.1)
+-    save_conversation(collection, user_id, chat_id, "system", answer_text) # 답변 
++    save_conversation(collection, user_id, chat_id, "user", user_input)
++    save_conversation(collection, user_id, chat_id, "system", answer_text)
+     print("최종 답변:", answer_text)
+ 
+ @app.route("/nlp-api/conv", methods=['POST'])
+@@ -119,7 +120,7 @@
+     result = text_chatgpt(system_prompt, user_input)
+     print("result(whole text):", result)
+     response_generator = generate_response_stream(user_id, chat_id, user_input)
+-    return Response(response_generator, mimetype='text/event-stream')
++    return Response(stream_message(response_generator), mimetype='text/event-stream')
+ 
+ @app.route("/nlp-api/test/stream", methods=['POST'])
+ def stream_output(): # chatGPT API 에서 실시간으로 청크 단위로 답변을 받아옴.
+@@ -129,7 +130,7 @@
+ 
+     # 답변 가져오기
+     response_generator = generate_response_stream(user_id, chat_id, user_input)
+-    return Response(response_generator, mimetype='text/event-stream')
++    return Response(stream_message(response_generator), mimetype='text/event-stream')
+ 
+ # test function for error handling
+ @app.route("/nlp-api/error_handling", methods=['POST'])
+Index: document_retriever.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\nfrom langchain_community.document_loaders import TextLoader\nfrom langchain_core.documents import Document\nfrom langchain_text_splitters import MarkdownHeaderTextSplitter\nfrom langchain_community.vectorstores import FAISS\nfrom langchain_core.output_parsers import StrOutputParser\nfrom langchain_core.runnables import RunnablePassthrough\nfrom langchain_core.prompts import PromptTemplate\nfrom langchain_core.prompts.few_shot import FewShotPromptTemplate\nfrom langchain_openai import ChatOpenAI, OpenAIEmbeddings\nfrom langchain_community.retrievers import BM25Retriever\nfrom langchain.retrievers import EnsembleRetriever\nfrom langchain.retrievers.multi_query import MultiQueryRetriever\nfrom langchain_core.prompts import ChatPromptTemplate\nfrom conversation_history import history\nfrom mongo_client import get_mongo_client\n\nimport pprint\nimport json\nimport logging, os\nimport ssl\nfrom dotenv import load_dotenv\n\ndef load_md_files(file_path): # file path 내의 모든 md 파일을 읽어 문서 데이터를 가져온다. \n    # 해당 폴더 내의 모든 .md 파일을 가져오기\n    loader = TextLoader(file_path)\n    documents = loader.load()  \n    print(f\"Loaded {len(documents)} documents from the MD.\")\n    print(\"len(docs):\", len(documents) )\n\n    return documents\n\ndef split_docs(documents):\n\n    # 단계 1: 문서 로드(Load Documents)\n    assert len(documents) == 1 # 수정 - 파일 여러 개일 떄 \n    assert isinstance(documents[0], Document) # 수정 - 파일 여러 개일 때 \n    readme_content = documents[0].page_content \n\n    \"\"\"# 단계 2: 문서 분할(Split Documents)\"\"\"\n    headers_to_split_on = [\n        (\"#\", \"Header 1\"),\n        (\"##\", \"Header 2\"),\n        (\"###\", \"Header 3\"),\n    ]\n\n    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on, strip_headers=False)\n    splitted_md = markdown_splitter.split_text(readme_content)\n    return splitted_md\n\ndef create_bm25_retriever(splitted_docs): # vectorDB 생성\n    bm25_retriever = BM25Retriever.from_documents(\n        splitted_docs,\n        )\n    bm25_retriever.k = 1  # BM25Retriever의 검색 결과 개수를 1로 설정합니다.\n    print(\"bm25 retriever created\")\n    return bm25_retriever\n\ndef create_FAISS_retriever(splitted_docs): # vectorDB 생성\n    embedding_function = OpenAIEmbeddings()\n    faiss_db = None\n    faiss_index_path = \"data/retrievers/faiss_index\"  # FAISS 인덱스를 저장할 디렉토리 경로\n    index_faiss_file, index_pkl_file = os.path.join(faiss_index_path, \"index.faiss\"), os.path.join(faiss_index_path, \"index.pkl\")\n\n    if os.path.exists(index_faiss_file) and os.path.exists(index_pkl_file):  # Check if both files exist\n        print(\"이미 FAISS index 존재\")\n        faiss_db = FAISS.load_local(\n            faiss_index_path,\n            embeddings=embedding_function,\n            allow_dangerous_deserialization=True  # 역직렬화 혀용 \n        )\n    else:\n        print(\"새롭게 FAISS index 만들기\")\n        # 새로운 문서 리스트를 생성하거나 불러와서 FAISS 벡터스토어를 초기화\n        faiss_db = FAISS.from_documents(splitted_docs, embedding=embedding_function)\n        faiss_db.save_local(faiss_index_path) # FAISS 인덱스를 로컬에 저장\n\n    # results = faiss_db.similarity_search_with_score(query, top_k = 3)\n    # # for 문을 사용하여 결과 출력\n    # for idx, (document, score) in enumerate(results):\n    #     print(f\"Result {idx + 1}:\")\n    #     #print(f\"Document: {document}\")\n    #     print(f\"Similarity Score: {score}\")\n    #     print(\"-\" * 50)  # 구분선 출력\n    faiss_retriever = faiss_db.as_retriever(search_kwargs={\"score_threshold\": 0.7})\n    # faiss_retriever.score\n    return faiss_retriever, faiss_db\n\ndef create_ensemble_retriever(retrievers): # retrievers: lst\n    ensemble_retriever = EnsembleRetriever(\n        retrievers= retrievers,\n        weights=[0.7, 0.3],\n    )\n    print(\"Retriever created.\")\n\n    return ensemble_retriever \n\n\ndef create_qa_chain(ensemble_retriever):\n    prompt = PromptTemplate.from_template(\n        \"\"\"You are an assistant for question-answering tasks. \n        Use the following pieces of retrieved context to answer the question. \n        Consider the intent behind the question to provide the most relevant and accurate response. \n        Remember to compare the specific time in the question with the time mentioned in the context to determine the correct answer.\n        If you don't know answer, just give me an answer based on your basic knowledge in detail.\n        #Question: \n        {question} \n        #Context: \n        {context} \n\n        #Answer:\"\"\"\n    )\n\n\n    llm = ChatOpenAI(model_name=\"gpt-4o-mini\", temperature=0.2, streaming=True) # , max_tokens = 150)\n    multiquery_retriever = MultiQueryRetriever.from_llm(  # \n        retriever=ensemble_retriever,\n        llm=llm,\n    )\n\n    print(\"LLM created.\")\n    \"\"\"Create a QA chain using the retriever.\"\"\"\n    rag_chain = (\n        {\"context\": multiquery_retriever, \"question\": RunnablePassthrough()}\n        | prompt\n        | llm\n        | StrOutputParser()\n    )\n    return rag_chain\n\ndef my_retriever(file_path):\n    ssl._create_default_https_context = ssl._create_unverified_context     \n    load_dotenv() # api key 정보 로드\n    \n    # RAG를 위한 vectorDB와 qa chain 을 로드함. \n    documents = load_md_files(file_path)\n    splitted_docs = split_docs(documents)\n    bm25_retriever = create_bm25_retriever(splitted_docs)\n    faiss_retriever, faiss_db = create_FAISS_retriever(splitted_docs)\n    ensemble_retriever = create_ensemble_retriever([bm25_retriever, faiss_retriever])\n    rag_chain = create_qa_chain(ensemble_retriever)\n    \n    return rag_chain, faiss_db\n\n \n# ==== test ======\n\"\"\"if __name__ == \"__main__\":\n    rag_chain = my_retriever('data/ktb_data_09.md')   \n    question = '8월에 며칠 이상 출석해야 훈련 장려금 받을 수 있어?'\n    print(\"question:\\n\", question)\n    response = rag_chain.invoke(question)\n    print('response:\\n', response)\n\"\"\"
+===================================================================
+diff --git a/document_retriever.py b/document_retriever.py
+--- a/document_retriever.py	
++++ b/document_retriever.py	
+@@ -112,7 +112,7 @@
+     )
+ 
+ 
+-    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.2, streaming=True) # , max_tokens = 150)
++    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.2, streaming=True, max_tokens = 150)
+     multiquery_retriever = MultiQueryRetriever.from_llm(  # 
+         retriever=ensemble_retriever,
+         llm=llm,
+Index: Dockerfile
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># 베이스 이미지로 Python 3.12 slim 사용\nFROM python:3.12-slim\n\n# 작업 디렉토리 설정\nWORKDIR /app\n\n# 시스템 패키지 설치\n# 시스템 패키지 설치 (필수 라이브러리 추가)\nRUN apt-get update && apt-get install -y --no-install-recommends \\\n    gcc \\\n    build-essential \\\n    libc-dev \\\n    && rm -rf /var/lib/apt/lists/*\n\n# Python 의존성 설치를 위한 requirements.txt 복사\nCOPY requirements.txt .\n\n# Python 패키지 설치\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 애플리케이션 코드 및 PDF 데이터 복사\nCOPY . .\n\n# Flask 환경 변수 설정\nENV FLASK_APP=app.py\nENV FLASK_RUN_HOST=0.0.0.0\nENV FLASK_RUN_PORT=5001\n\n# 5001 포트를 컨테이너 외부에 노출\nEXPOSE 5001\n\n# 애플리케이션 실행\nCMD [\"flask\", \"run\", \"--host=0.0.0.0\", \"--port=5001\"]\n
+===================================================================
+diff --git a/Dockerfile b/Dockerfile
+--- a/Dockerfile	
++++ b/Dockerfile	
+@@ -23,9 +23,12 @@
+ 
+ # Flask 환경 변수 설정
+ ENV FLASK_APP=app.py
++ENV FLASK_ENV=development
++ENV FLASK_DEBUG = 1
+ ENV FLASK_RUN_HOST=0.0.0.0
+ ENV FLASK_RUN_PORT=5001
+ 
++
+ # 5001 포트를 컨테이너 외부에 노출
+ EXPOSE 5001
+ 
+Index: utils.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import openai\nimport json\nimport logging\nfrom flask import request, Response\nfrom get_weather import get_weather_info\nfrom find_routes_v2 import get_route_description\nfrom conversation_history import save_conversation\nfrom openai import OpenAIError\nfrom werkzeug.exceptions import BadRequest\nfrom conversation_history import history\nimport time\nimport os\n\n# 환경 변수에서 API 키와 PDF 경로를 로드\nOPENAI_API_KEY = os.getenv('OPENAI_API_KEY')\nTMAP_API_KEY = os.getenv('TMAP_API_KEY')\nKAKAO_MAP_API_KEY = os.getenv('KAKAO_MAP_API_KEY1')\nWEATHER_API_KEY = os.getenv('WEATHER_API_KEY')\nLOCATION1 = os.getenv('LOCATION1')\n\n# LLM 변수 정의\nSTREAM_TOKEN_SIZE = 1 # 스트림 토큰 단위 default 125\nMODEL_VERSION = \"gpt-4o-mini\" # \"gpt-3.5-turbo\"\nMAX_TOKENS_OUTPUT = 500\n\ndef stream_message(text):  # 데이터가 한 글자 단위로 스트리밍 된다.\n    for char in text:\n        yield f\"data: {char}\\n\\n\"\n\ndef stream_chatgpt(system_prompt, user_prompt, user_id, chat_id):\n    print(\"stream_chatgpt()\")\n    first = time.time()\n    print(f\"first: {first}\")\n    # 기존 N개 데이터 히스토리 가져오기\n    messages = [{\"role\": \"system\", \"content\": system_prompt + \"\\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요.\"},\n                {\"role\": \"user\", \"content\": user_prompt} ]\n    if user_id is not None and chat_id is not None:\n        conv_history = history(user_id, chat_id, limit=2)\n        for conv in conv_history:\n            role = conv.get('role') # 'user' or 'system'\n            content = conv.get('text')\n            messages.append({\"role\": role, \"content\": content})\n\n    print('history:', messages)\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    second = time.time()\n    print(f\"second: {second}\")\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages= messages,\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수\n            n = 1,         # 생성 답변 개수,\n            stream=True\n        )\n        def event_stream(): #stream generator\n            result_txt = ''\n            for chunk in response:\n                text = chunk.choices[0].delta.content\n                #print(\"chunk.choices[0]\", chunk.choices[0])\n                print(\"- text:\", text, \"\\n\")\n                if text:\n                    result_txt += text\n                    yield f\"data: {text}\\n\\n\"\n\n            print(\"답변 결과:\\n\", result_txt)\n            # 답변 결과 DB 에 저장\n            save_conversation(user_id, chat_id, \"system\", result_txt)\n        return Response(event_stream(), mimetype='text/event-stream')\n    except OpenAIError as e:\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        raise e # OpenAIError\n    except Exception as e:\n        logging.error(f\"Error: {str(e)}\")\n        raise e # OpenAIError\n\ndef text_chatgpt(system_prompt, user_prompt): # text 형식으로 리턴\n    client = openai.OpenAI(api_key=OPENAI_API_KEY)\n    try:\n        response = client.chat.completions.create(\n            model=MODEL_VERSION,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt + \"\\n 정보를 일반 텍스트로 작성해 주세요. 굵게 표시하지 말고, 특수 형식 없이 일반 텍스트로만 작성해 주세요.\"},\n                {\"role\": \"user\", \"content\": user_prompt}\n            ],\n            temperature=0.0, # 출력의 다양성 조절 (0~1), 높을 수록 창의적인 대답\n            max_tokens= MAX_TOKENS_OUTPUT, # 최대 출력 토큰 개수\n            n = 1,         # 생성 답변 개수,\n            stream=False\n        )\n        return response.choices[0].message.content\n    except OpenAIError as e:\n        logging.error(f\"Error while calling chatGPT API function call: {str(e)}\")\n        raise e # OpenAIError\n    except Exception as e:\n        logging.error(f\"Error: {str(e)}\")\n        raise e # OpenAIError\n\ndef topic_classification(user_input):\n    system_prompt = \"\"\"\n            You are a classifier. Your task is to analyze '{user_input}'.\n        - If '{user_input}' is a question about the asking weather, return 'WEATHER'.\n        - If '{user_input}' is a question about public transportation routes involving a specific origin and destination, return 'TRANS'.\n        - If '{user_input}' does not match either of the above cases, return 'ELSE'.\n        \"\"\"\n    return text_chatgpt(system_prompt, user_input)\n\ndef extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출력\n    system_prompt = \"\"\"\n            Your task is to identify the departure and destination from the user's input.\n            Follow these guidelines:\n            1. If either the departure or destination is ambiguous or unclear, mark it as unknown.\n            2. If the input refers to the user's current location, mark it as current.\n            3. If the input suggests the user's home location, mark it as home.\n            4. Please return a dictionary formatted like this : {\"from\":departure, \"to\":destination}\n            \"\"\"\n    return text_chatgpt(system_prompt =system_prompt, user_prompt= user_input )\n\ndef handle_weather_topic(user_input, user_id, chat_id):\n    weather_info = get_weather_info()\n    system_prompt = (f\"You are a helpful assistant, and you will kindly answer questions about current weather. \"\n              f\"한국어로 대답해야해. 현재 날씨 정보는 다음과 같아. {weather_info}, \"\n              \"이 날씨 정보를 다 출력할 필요는 없고, 주어진 질문인 '{user_input}'에 필요한 답만 해줘 \")\n    result = stream_chatgpt(system_prompt, user_input, user_id, chat_id)\n    return result\n\ndef handle_trans_topic(user_input, user_id, chat_id):\n    dict_string = extract_arrv_dest(user_input)\n    from_to_dict = json.loads(dict_string)\n    result_txt = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)\n    system_prompt = f\"너는 출발지에서 목적지까지 경로를 안내하는 역할이고, 한국어로 대답해야해.\"\\\n              f\"사용자는 경로에 대해 요약된 텍스트를 줄거야. 너는 그걸 자연스럽게 만들어주면 돼. \"\\\n              f\"출발지는 ```{from_to_dict['from']}```이고 목적지는 ```{from_to_dict['to']}```임.  \"\n    user_prompt = f\"다음을 자연스럽게 다시 말해줘:\\n```{result_txt}``` \"\n    return stream_chatgpt(system_prompt, user_prompt, user_id, chat_id)\n\ndef handle_else_topic(user_input, user_id, chat_id):\n    system_prompt = (\"You are a helpful assistant.\"\n              \"사용자들은 한국어로 질문할 거고, 너도 한국어로 대답해야돼\")\n    result = stream_chatgpt(system_prompt, user_input, user_id, chat_id)\n    return result\n\ndef get_request_data(title=None):\n    params = request.get_json()\n    print(\"params:\", params)\n    if not params:  # JSON 데이터가 없는 경우\n        raise BadRequest(\"No request body\")\n    # 변수가 3개 : content, user_id, chat_id\n    if 'content' not in params or not isinstance(params['content'], str) or not params['content'].strip() :  # 'content' 필드가 없거나 값이 비어 있는 경우\n        raise BadRequest(\"No content field in request body, empty value or invalid value\")\n    if title is None: # title은 user_id, chat_id 가 필요 없음\n        if 'user_id' not in params or not params['user_id'] or not isinstance(params['user_id'], int):\n            raise BadRequest(\"No user_id field in request body, empty value or invalid value\")\n        if 'chat_id' not in params or not params['chat_id'] or not isinstance(params['chat_id'], int):\n            raise BadRequest(\"No chat_id field in request body, empty value or invalid value\")\n\n    #content, user_id, chat_id = params['content'], params['user_id'], params['chat_id']\n    #return content, user_id, chat_id\n    return params
+===================================================================
+diff --git a/utils.py b/utils.py
+--- a/utils.py	
++++ b/utils.py	
+@@ -25,8 +25,9 @@
+ 
+ def stream_message(text):  # 데이터가 한 글자 단위로 스트리밍 된다.
+     for char in text:
+-        yield f"data: {char}\n\n"
++        yield f"data: {char}\n\n" 
+ 
++
+ def stream_chatgpt(system_prompt, user_prompt, user_id, chat_id):
+     print("stream_chatgpt()")
+     first = time.time()
+Index: test/input/user_inputs.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\n  \"user_inputs\": [\n    \"카카오 클라우드 교육 채널에 로그인이 되지 않을 경우 어떻게 해야 하나요?\",\n    \"카카오 클라우드 교육의 전체 일정과 내용은 어떻게 구성되어 있나요?\",\n    \"카카오 클라우드 교육의 시간과 장소는 어떻게 되나요?\",\n    \"카카오 클라우드 교육의 방식은 어떻게 어떻게 되나요?\",\n\n    \"카카오 부트캠프 가는 길 알려줘\",\n    \"카카오 부트캠프 교육장 주소는 어떻게 되나요?\",\n    \"카카오 부트캠프 교육장 주차 지원이 되나요?\",\n    \"카카오 부트캠프 가는 길 알려줘\",\n\n    \"ChatGPT Plus 구독료 지원 방법 안내해줘\",\n    \"ChatGPT Plus 구독료 지원을 신청하는 방법은 무엇인가요?\",\n    \"ChatGPT Plus 구독료 지원 대상과 횟수에 대해서 안내해줘\",\n    \"ChatGPT Plus 구독료 청구 방법에 대해서 알려줘\",\n    \"chatgpt plus 구독료 청구할 때, 증빙자료에 뭐 들어가야해?\",\n    \"chatgpt plus 구독료 청구할 때, 유의 사항에 대해서 알려줘\"\n\n\n  ]\n}\n\n
+===================================================================
+diff --git a/test/input/user_inputs.json b/test/input/user_inputs.json
+--- a/test/input/user_inputs.json	
++++ b/test/input/user_inputs.json	
+@@ -16,8 +16,6 @@
+     "ChatGPT Plus 구독료 청구 방법에 대해서 알려줘",
+     "chatgpt plus 구독료 청구할 때, 증빙자료에 뭐 들어가야해?",
+     "chatgpt plus 구독료 청구할 때, 유의 사항에 대해서 알려줘"
+-
+-
+   ]
+ }
+ 

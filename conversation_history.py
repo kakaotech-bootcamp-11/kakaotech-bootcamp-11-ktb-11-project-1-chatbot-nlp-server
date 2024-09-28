@@ -73,6 +73,7 @@ if __name__ == "__main__":
     save_conversation("user123", "thread456", "assistant", "안녕하세요! 오늘 날씨는 맑고 따뜻합니다.")
 
     # 최근 대화 5개 가져오기
+    # 최근 대화 5개 가져오기
     recent_conversations = history("user123", "thread456", limit=5)
     for conversation in recent_conversations:
         print(f"대화 시간: {conversation['timestamp']}")
