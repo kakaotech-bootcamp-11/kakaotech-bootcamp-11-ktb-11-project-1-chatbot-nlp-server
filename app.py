@@ -67,12 +67,12 @@ def generate_response_stream(user_id, chat_id, user_input):
         print("chunk:", chunk)
         answer_text += chunk
         chunk_json = json.dumps({"text": chunk}, ensure_ascii=False)
-        yield f"data: {chunk_json}\n\n" # "data": ... \n\n 을 
+        yield f"data: {chunk_json}\n\n" # "data": ... \n\n 을
         # print(chunk)
-    # 질문 & 응답 저장 
+    # 질문 & 응답 저장
 
     #time.sleep(0.1)
-    save_conversation(collection, user_id, chat_id, "system", answer_text) # 답변 
+    save_conversation(collection, user_id, chat_id, "system", answer_text) # 답변
     print("최종 답변:", answer_text)
 
 @app.route("/nlp-api/conv", methods=['POST'])

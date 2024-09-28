@@ -6,7 +6,7 @@ from mongo_client import get_mongo_client
 import os
 
 # KoNLPy를 사용하여 간단한 키워드 기반 태그 추출
-#okt = Okt()
+# okt = Okt()
 
 """def extract_tags(text):
     # 명사만 추출
@@ -23,6 +23,8 @@ try:
     print("MongoDB 연결 성공")
 except Exception as e:
     print(f"MongoDB 연결 실패: {str(e)}")"""
+
+
 # # MongoDB 연결 설정
 # client = MongoClient(mongo_uri)
 # db = client['chatbot_db']  # 데이터베이스 이름 설정
@@ -36,7 +38,7 @@ def save_conversation(collection, user_id, chat_id, role, text):
     korea_tz = pytz.timezone('Asia/Seoul')
     current_time = datetime.now(korea_tz).strftime('%Y-%m-%d %H:%M:%S')
 
-    #client, db, collection = get_mongo_client()
+    # client, db, collection = get_mongo_client()
 
     # 대화 내용 저장
     conversation = {
@@ -48,10 +50,10 @@ def save_conversation(collection, user_id, chat_id, role, text):
         # "tags": tags  # 태그 저장
     }
     collection.insert_one(conversation)
-    
 
-def history(collection, user_id, chat_id, limit=4): # 대화 기록 조회
-    
+
+def history(collection, user_id, chat_id, limit=4):  # 대화 기록 조회
+
     # 대화 기록 불러오기
     query = {
         "user_id": user_id,
@@ -62,6 +64,7 @@ def history(collection, user_id, chat_id, limit=4): # 대화 기록 조회
 
     # 내림차순으로 가져온 후, 이를 다시 뒤집어 최신순으로 반환
     return list(conversations)[::-1]
+
 
 # 예시 사용
 if __name__ == "__main__":
