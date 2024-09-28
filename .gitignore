@@ -17,6 +17,11 @@ bin/
 share/
 trash/
 .idea/
+evaluation/
+logging/
+prev/
+test/
+
 
 
 pyrightconfig.json
