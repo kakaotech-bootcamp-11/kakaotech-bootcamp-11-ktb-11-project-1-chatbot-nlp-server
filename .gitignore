@@ -16,7 +16,7 @@ include/
 bin/
 share/
 trash/
-
+.idea/
 
 
 pyrightconfig.json

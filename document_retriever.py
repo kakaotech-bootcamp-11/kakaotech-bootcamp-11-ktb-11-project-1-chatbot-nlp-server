@@ -20,25 +20,21 @@ import logging, os
 import ssl
 from dotenv import load_dotenv
 
-def load_md_files(file_path): # file path 내의 모든 md 파일을 읽어 문서 데이터를 가져온다. 
-    # UTF-8로 파일을 직접 읽기
-    with open(file_path, 'r', encoding='utf-8') as f:
-        text = f.read()
-
-    # 문서 객체 생성
-    documents = [Document(page_content=text)]
-    
+def load_md_files(file_path): # file path 내의 모든 md 파일을 읽어 문서 데이터를 가져온다.
+    # 해당 폴더 내의 모든 .md 파일을 가져오기
+    loader = TextLoader(file_path)
+    documents = loader.load()
     print(f"Loaded {len(documents)} documents from the MD.")
-    print("len(docs):", len(documents))
+    print("len(docs):", len(documents) )
 
     return documents
 
 def split_docs(documents):
 
     # 단계 1: 문서 로드(Load Documents)
-    assert len(documents) == 1 # 수정 - 파일 여러 개일 떄 
-    assert isinstance(documents[0], Document) # 수정 - 파일 여러 개일 때 
-    readme_content = documents[0].page_content 
+    assert len(documents) == 1 # 수정 - 파일 여러 개일 떄
+    assert isinstance(documents[0], Document) # 수정 - 파일 여러 개일 때
+    readme_content = documents[0].page_content
 
     """# 단계 2: 문서 분할(Split Documents)"""
     headers_to_split_on = [
@@ -70,7 +66,7 @@ def create_FAISS_retriever(splitted_docs): # vectorDB 생성
         faiss_db = FAISS.load_local(
             faiss_index_path,
             embeddings=embedding_function,
-            allow_dangerous_deserialization=True  # 역직렬화 혀용 
+            allow_dangerous_deserialization=True  # 역직렬화 혀용
         )
     else:
         print("새롭게 FAISS index 만들기")
@@ -96,7 +92,7 @@ def create_ensemble_retriever(retrievers): # retrievers: lst
     )
     print("Retriever created.")
 
-    return ensemble_retriever 
+    return ensemble_retriever
 
 
 def create_qa_chain(ensemble_retriever):
@@ -115,7 +111,7 @@ def create_qa_chain(ensemble_retriever):
         #Answer:"""
     )
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.0, streaming=True)# , max_tokens = 150)
-    multiquery_retriever = MultiQueryRetriever.from_llm(  # 
+    multiquery_retriever = MultiQueryRetriever.from_llm(  #
         retriever=ensemble_retriever,
         llm=llm,
     )
@@ -131,10 +127,10 @@ def create_qa_chain(ensemble_retriever):
     return rag_chain
 
 def my_retriever(file_path):
-    ssl._create_default_https_context = ssl._create_unverified_context     
+    ssl._create_default_https_context = ssl._create_unverified_context
     load_dotenv() # api key 정보 로드
 
-    # RAG를 위한 vectorDB와 qa chain 을 로드함. 
+    # RAG를 위한 vectorDB와 qa chain 을 로드함.
     documents = load_md_files(file_path)
     splitted_docs = split_docs(documents)
     bm25_retriever = create_bm25_retriever(splitted_docs)
