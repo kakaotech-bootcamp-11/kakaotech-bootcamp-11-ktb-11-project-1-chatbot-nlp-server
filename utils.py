@@ -1,8 +1,8 @@
 import openai
 import logging
 from flask import request, Response
-#from get_weather import get_weather_info
-#from find_routes_v2 import get_route_description
+# from get_weather import get_weather_info
+# from find_routes_v2 import get_route_description
 from conversation_history import save_conversation, history
 from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
@@ -115,7 +115,7 @@ def extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출
             """
     return text_chatgpt(system_prompt =system_prompt, user_prompt= user_input )
 
-"""def handle_weather_topic(user_input, user_id, chat_id):
+""" def handle_weather_topic(user_input, user_id, chat_id):
     weather_info = get_weather_info()
     system_prompt = (f"You are a helpful assistant, and you will kindly answer questions about current weather. "
               f"한국어로 대답해야해. 현재 날씨 정보는 다음과 같아. {weather_info}, "
@@ -123,7 +123,7 @@ def extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출
     result = stream_chatgpt(system_prompt, user_input, user_id, chat_id)
     return result"""
 
-"""def handle_trans_topic(user_input, user_id, chat_id):
+""" def handle_trans_topic(user_input, user_id, chat_id):
     dict_string = extract_arrv_dest(user_input)
     from_to_dict = json.loads(dict_string)
     result_txt = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)
