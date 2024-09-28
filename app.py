@@ -10,7 +10,9 @@ from conversation_history import save_conversation, history
 from pymongo import MongoClient
 from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
 from mongo_client import get_mongo_client
-import json, time
+import json
+from difflib import SequenceMatcher
+
 
 
 
@@ -74,6 +76,16 @@ def generate_response_stream(user_id, chat_id, user_input):
     #time.sleep(0.1)
     save_conversation(collection, user_id, chat_id, "system", answer_text) # 답변
     print("최종 답변:", answer_text)
+    
+def is_related_to_previous_conversation(user_input, previous_conversation):
+    # 문장 유사도를 기반으로 연관성 판단
+    similarity_threshold = 0.3  # 유사도 임계값 (0~1)
+    similarity = SequenceMatcher(None, user_input, previous_conversation).ratio()
+    
+    print(f"유사도: {similarity}")  # 유사도를 출력하여 확인할 수 있음
+    
+    return similarity > similarity_threshold
+
 
 @app.route("/nlp-api/conv", methods=['POST'])
 def llm():
