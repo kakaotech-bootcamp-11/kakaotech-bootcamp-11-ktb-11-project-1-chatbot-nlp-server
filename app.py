@@ -8,7 +8,8 @@ from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
 from conversation_history import save_conversation, history
 from pymongo import MongoClient
-from utils import get_request_data, topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
+from utils import get_request_data
+# , topic_classification, handle_weather_topic, handle_trans_topic, handle_else_topic, text_chatgpt
 from mongo_client import get_mongo_client
 import json, time
 

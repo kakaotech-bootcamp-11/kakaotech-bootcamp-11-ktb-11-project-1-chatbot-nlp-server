@@ -1,13 +1,11 @@
 import openai
-import json
 import logging
 from flask import request, Response
-from get_weather import get_weather_info
-from find_routes_v2 import get_route_description
-from conversation_history import save_conversation
+# from get_weather import get_weather_info
+# from find_routes_v2 import get_route_description
+from conversation_history import save_conversation, history
 from openai import OpenAIError
 from werkzeug.exceptions import BadRequest
-from conversation_history import history
 import time
 import os
 
@@ -117,15 +115,15 @@ def extract_arrv_dest(user_input): #user input 에서 출발지와 도착지 출
             """
     return text_chatgpt(system_prompt =system_prompt, user_prompt= user_input )
 
-def handle_weather_topic(user_input, user_id, chat_id):
+""" def handle_weather_topic(user_input, user_id, chat_id):
     weather_info = get_weather_info()
     system_prompt = (f"You are a helpful assistant, and you will kindly answer questions about current weather. "
               f"한국어로 대답해야해. 현재 날씨 정보는 다음과 같아. {weather_info}, "
               "이 날씨 정보를 다 출력할 필요는 없고, 주어진 질문인 '{user_input}'에 필요한 답만 해줘 ")
     result = stream_chatgpt(system_prompt, user_input, user_id, chat_id)
-    return result
+    return result"""
 
-def handle_trans_topic(user_input, user_id, chat_id):
+""" def handle_trans_topic(user_input, user_id, chat_id):
     dict_string = extract_arrv_dest(user_input)
     from_to_dict = json.loads(dict_string)
     result_txt = get_route_description(from_to_dict, TMAP_API_KEY, KAKAO_MAP_API_KEY)
@@ -133,7 +131,7 @@ def handle_trans_topic(user_input, user_id, chat_id):
               f"사용자는 경로에 대해 요약된 텍스트를 줄거야. 너는 그걸 자연스럽게 만들어주면 돼. "\
               f"출발지는 ```{from_to_dict['from']}```이고 목적지는 ```{from_to_dict['to']}```임.  "
     user_prompt = f"다음을 자연스럽게 다시 말해줘:\n```{result_txt}``` "
-    return stream_chatgpt(system_prompt, user_prompt, user_id, chat_id)
+    return stream_chatgpt(system_prompt, user_prompt, user_id, chat_id)"""
 
 def handle_else_topic(user_input, user_id, chat_id):
     system_prompt = ("You are a helpful assistant."
