@@ -1,7 +1,0 @@
-[
-  {
-    "input": "카카오 클라우드 교육 채널에 로그인이 되지 않을 경우 어떻게 해야 하나요?",
-    "status_code": 200,
-    "response_text": "{\"code\":500,\"description\":\"The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\",\"error\":\"Internal server error\",\"error_message\":\"500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.\"}\n"
-  }
-]
