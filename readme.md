@@ -123,7 +123,21 @@ print("검색기 로드 끝")
 (4) 전송 버튼 클릭 
 - 클릭하면 하단 결과 창에서 LLM 모델이 생성한 답변을 확인할 수 있다. 
 
+4. 몽고DB의 활성화
+* 몽고DB 서버 시작
+```
+brew services start mongodb/brew/mongodb-community
+```
 
+* 몽고 DB 서버 상태 확인
+```
+brew services list
+```
+
+* 몽고DB 클라이언트 접속
+```
+mongosh
+```
 
 ## 주요 함수 설명 
 - `app.py`: 메인 함수, 답변 출력하는 AI flask 서버 정의 
