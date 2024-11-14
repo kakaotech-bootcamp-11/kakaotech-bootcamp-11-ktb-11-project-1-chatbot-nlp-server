@@ -1,6 +1,6 @@
 import re
 import json
-from models.llama import get_llama_model
+from utils.llama import get_llama_model
 import os
 from collections import Counter
 
